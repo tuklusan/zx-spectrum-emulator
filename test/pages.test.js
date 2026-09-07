@@ -338,7 +338,7 @@ test("CP/M page exposes a live terminal entry point", async () => {
 test("build:pages creates a static dist tree for GitHub Pages", async () => {
   await rm("dist", { recursive: true, force: true });
 
-  const result = spawnSync("npm", ["run", "build:pages"], {
+  const result = spawnSync(process.execPath, ["scripts/build-pages.js"], {
     encoding: "utf8"
   });
 

@@ -36,6 +36,9 @@ jobs:
       - name: Build static demo
         run: npm run build:pages
 
+      - name: Verify Pages SEO output
+        run: node scripts/verify-pages-seo.js
+
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:

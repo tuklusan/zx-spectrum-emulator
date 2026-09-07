@@ -3,9 +3,19 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ZX Spectrum 48K</title>
+    <title>ZX Spectrum Online Emulator | JavaScript 48K Web Emulator</title>
+    <meta name="description" content="Free ZX Spectrum 48K online emulator in JavaScript. Load TAP and standard-speed TZX tapes, SNA/Z80 snapshots, RZX recordings, BASIC and Z80 debugging tools.">
+    <link rel="canonical" href="https://tuklusan.github.io/zx-spectrum-emulator/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="ZX Spectrum Online Emulator | JavaScript 48K Web Emulator">
+    <meta property="og:description" content="Run a ZX Spectrum 48K in your browser with TAP/TZX tape loading, SNA/Z80 snapshots, RZX playback, BASIC tools and a built-in Z80 debugger.">
+    <meta property="og:url" content="https://tuklusan.github.io/zx-spectrum-emulator/">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="ZX Spectrum Online Emulator | JavaScript 48K Web Emulator">
+    <meta name="twitter:description" content="JavaScript ZX Spectrum 48K web emulator with TAP/TZX, SNA/Z80, RZX, BASIC and Z80 debugging tools.">
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="./public/styles.css">
+    <link rel="stylesheet" href="./public/seo.css">
   </head>
   <body class="spectrum-page-body">
     <div class="spectrum-page-content">
@@ -15,6 +25,19 @@
         <a href="./trs80.html">TRS-80</a>
         <a href="./ti85.html">TI-85</a>
       </nav>
+      <header class="spectrum-seo-hero">
+        <p class="spectrum-seo-kicker">Free · Open source · Runs in your browser</p>
+        <h1>ZX Spectrum 48K Online Emulator</h1>
+        <p class="spectrum-seo-summary">Run a Sinclair ZX Spectrum 48K directly in your browser with this JavaScript web emulator. Load TAP and standard-speed TZX tapes, open SNA and Z80 snapshots, play RZX recordings, paste Sinclair BASIC, and inspect the machine with built-in Z80 debugging tools.</p>
+        <ul class="spectrum-seo-pills" aria-label="ZX Spectrum emulator features">
+          <li>JavaScript web emulator</li>
+          <li>TAP / standard-speed TZX</li>
+          <li>SNA / Z80 snapshots</li>
+          <li>RZX playback</li>
+          <li>Sinclair BASIC tools</li>
+          <li>Z80 debugger + rewind</li>
+        </ul>
+      </header>
       <main class="shell">
       <section class="stage" aria-label="ZX Spectrum display and debugger">
         <div class="screen-window resizable-window" data-window-id="screen">
@@ -78,7 +101,7 @@
       </section>
       <aside class="panel" aria-label="Machine controls">
         <header>
-          <h1>ZX Spectrum 48K</h1>
+          <h2 class="emulator-control-title">ZX Spectrum 48K</h2>
           <output id="status">Loading ROM...</output>
         </header>
         <div class="controls">
@@ -178,6 +201,83 @@ RUN</textarea>
         </section>
       </aside>
       </main>
+
+      <section class="spectrum-seo-content" aria-labelledby="about-zx-spectrum-emulator">
+        <section class="spectrum-seo-section">
+          <h2 id="about-zx-spectrum-emulator">ZX Spectrum web emulator for games, BASIC and Z80 development</h2>
+          <p>This browser-based emulator recreates the original 48K Sinclair ZX Spectrum around a validated Z80 CPU core, 48K memory map, keyboard matrix, beeper, 50 Hz display and ULA timing behavior. It runs as a JavaScript application in a modern web browser, with no desktop emulator installation required.</p>
+          <p>It is deliberately more than a quick game launcher. The same page combines tape and snapshot loading with Sinclair BASIC import/export, RZX playback, instruction stepping, reverse stepping, rewind history, live registers and flags, disassembly, memory inspection, raster timing and source-listing tools.</p>
+        </section>
+
+        <div class="spectrum-seo-feature-grid" aria-label="ZX Spectrum emulator feature highlights">
+          <article class="spectrum-seo-card">
+            <h3>TAP and TZX tape support</h3>
+            <p>Open <code>.tap</code> tape images and standard-speed <code>.tzx</code> data blocks in the browser. Inspect tape blocks, fast-load supported BASIC and CODE header/data pairs, or let standard-speed blocks feed the emulated EAR input.</p>
+          </article>
+          <article class="spectrum-seo-card">
+            <h3>SNA and Z80 snapshot support</h3>
+            <p>Load classic 48K <code>.sna</code> snapshots and compatible <code>.z80</code> snapshots, including compressed or uncompressed version 1 files and extended snapshots containing the normal 48K pages. Save the current machine as an uncompressed 48K Z80 snapshot.</p>
+          </article>
+          <article class="spectrum-seo-card">
+            <h3>Browser Z80 debugger</h3>
+            <p>Pause execution, step by frame or instruction, step backward, scrub rewind history, and inspect registers, flags, disassembly, memory, raster position and t-states. Load assembly/listing files beside the debugger and search the built-in sjasmplus reference.</p>
+          </article>
+        </div>
+
+        <section class="spectrum-seo-section">
+          <h2>Supported ZX Spectrum file formats</h2>
+          <table class="spectrum-seo-format-table">
+            <thead>
+              <tr>
+                <th scope="col">Format</th>
+                <th scope="col">Browser support</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>TAP</code></td>
+                <td>Tape block parsing, inspection, supported fast-loading and standard-speed EAR pulse playback.</td>
+              </tr>
+              <tr>
+                <td><code>TZX</code></td>
+                <td>Standard-speed data blocks. Turbo, pure-data and more complex custom-loader TZX timing are not claimed as supported.</td>
+              </tr>
+              <tr>
+                <td><code>SNA</code></td>
+                <td>Load classic 48K SNA snapshots.</td>
+              </tr>
+              <tr>
+                <td><code>Z80</code></td>
+                <td>Load compatible 48K Z80 snapshots and save the current state as an uncompressed version 1 Z80 snapshot.</td>
+              </tr>
+              <tr>
+                <td><code>RZX</code></td>
+                <td>Step through or play compatible 48K RZX input recordings with embedded or user-supplied SNA/Z80 snapshots.</td>
+              </tr>
+              <tr>
+                <td><code>BAS / TXT</code></td>
+                <td>Paste or import Sinclair BASIC source, tokenize it into Spectrum memory, run it, and export editable BASIC text.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="spectrum-seo-section">
+          <h2>Built-in ZX Spectrum and Z80 debugging tools</h2>
+          <p>The debugging workbench is aimed at people writing, studying or reverse-engineering Z80 and Spectrum software. It exposes live CPU state, flags, disassembly around the program counter, key memory regions, BASIC state, raster timing and an optional raster overlay. Resizable debugger panels can follow source listings while the emulator runs or steps, and the bounded reverse history allows frame rewind without taking a complete 48K memory copy at every checkpoint.</p>
+        </section>
+
+        <section class="spectrum-seo-section">
+          <h2>Open-source JavaScript ZX Spectrum emulator</h2>
+          <p>The emulator code is open source under the MIT License. The bundled historical ZX Spectrum 48K ROM is separate from the emulator code license; the repository keeps its ROM and third-party provenance notes separately.</p>
+          <nav class="spectrum-seo-links" aria-label="Project links">
+            <a href="https://github.com/tuklusan/zx-spectrum-emulator">ZX Spectrum emulator source on GitHub</a>
+            <a href="https://github.com/tuklusan/zx-spectrum-emulator/blob/main/LICENSE" rel="license">MIT License</a>
+            <a href="https://github.com/tuklusan/zx-spectrum-emulator/blob/main/ROM/README.md">ROM and disk image notices</a>
+            <a href="./machines.html">Other browser Z80 machines</a>
+          </nav>
+        </section>
+      </section>
     </div>
     <footer class="site-contact-footer">
       <span>Contact</span>
