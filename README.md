@@ -1,3 +1,21 @@
+# ZX Spectrum 48K — Live in Your Browser
+
+[**▶ Launch the live ZX Spectrum 48K emulator**](https://tuklusan.github.io/zx-spectrum-emulator/)
+
+This repository is a fork of Chris Wilson's original `zx-spectrum-emulator` project, with the live GitHub Pages build presenting the current combined codebase. Run it directly in a modern browser, with TAP and standard-speed TZX tape support, SNA/Z80 snapshots, RZX playback, Sinclair BASIC tools, and the built-in Z80 debugger and rewind workbench.
+
+## Other ZX Spectrum Projects
+
+- [**Warajevo ZX Spectrum Next**](https://github.com/tuklusan/warajevo-zx-spectrum-next) — an active, architecture-led effort to build a modern, portable continuation of the Warajevo emulator. The repository currently contains the Phase-0/bootstrap C11/CMake implementation scaffold, validation gates, remote test harnesses, and the design authorities that define the intended emulator architecture.
+
+- [**ZX-UX — The ZX Spectrum 48K Unix Project**](https://github.com/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project) — a Unix-like development environment being engineered for the original unexpanded 48K ZX Spectrum: one Z80, 48K of RAM, cassette persistence, dense 64-column text, cooperative tasks, and a native toolchain, developed in explicit evidence-backed phases.
+
+## Computing Blog
+
+[**Supratim Sanyal's Computing Blog — Wandering Digital Wastelands as a Geek**](https://supratim-sanyal.blogspot.com/) is a long-running notebook of computing discoveries, experiments, and things worth documenting so they do not have to be reinvented later. Recent work covers AI-agent software development, model and coding-harness experiments, cross-platform engineering on Linux, macOS and Windows, GitHub Actions and CI debugging, browser-delivered software, and detailed engineering post-mortems.
+
+---
+
 # Z80 Machine Lab
 
 A faithful Zilog Z80 emulator with four browser-hosted machine layers:
