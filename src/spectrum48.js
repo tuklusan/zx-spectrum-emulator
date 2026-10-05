@@ -63,6 +63,7 @@ export class Spectrum48 {
   static FRAME_WIDTH = Spectrum48.SCREEN_WIDTH + Spectrum48.BORDER_LEFT + Spectrum48.BORDER_RIGHT;
   static FRAME_HEIGHT = Spectrum48.SCREEN_HEIGHT + Spectrum48.BORDER_TOP + Spectrum48.BORDER_BOTTOM;
   static T_STATES_PER_FRAME = 69888;
+  static INTERRUPT_PULSE_T_STATES = 32;
   static T_STATES_PER_LINE = 224;
   static SCANLINES_PER_FRAME = 312;
   static DISPLAY_FIRST_LINE = 64;
@@ -141,6 +142,7 @@ export class Spectrum48 {
   }
 
   readPort(port) {
+    this.trackPortAccess(port);
     if (this.inputPlayback) {
       if (this.inputPlayback.index >= this.inputPlayback.values.length) {
         throw new Error("RZX frame performed more input reads than recorded");
@@ -154,6 +156,7 @@ export class Spectrum48 {
   }
 
   writePort(port, value) {
+    this.trackPortAccess(port);
     if ((port & 0x0001) !== 0) return;
     this.borderColor = value & 0x07;
     const beeperOn = (value & 0x10) !== 0;
@@ -572,13 +575,17 @@ export class Spectrum48 {
     };
   }
 
+  ulaContentionDelay(tState = this.cpu.tStates) {
+    const raster = this.getRasterPositionAt(tState);
+    if (raster.displayLine < 0 || raster.displayLine >= Spectrum48.SCREEN_HEIGHT) return 0;
+    if (raster.displayColumn < -1 || raster.displayColumn >= 127) return 0;
+    return ULA_CONTENTION_PATTERN[(raster.displayColumn + 1) & 0x07];
+  }
+
   contentionDelay(address, tState = this.cpu.tStates) {
     const mappedAddress = address & 0xffff;
     if (mappedAddress < 0x4000 || mappedAddress >= 0x8000) return 0;
-    const raster = this.getRasterPositionAt(tState);
-    if (raster.displayLine < 0 || raster.displayLine >= Spectrum48.SCREEN_HEIGHT) return 0;
-    if (raster.displayColumn < 0 || raster.displayColumn >= 128) return 0;
-    return ULA_CONTENTION_PATTERN[raster.displayColumn & 0x07];
+    return this.ulaContentionDelay(tState);
   }
 
   trackMemoryAccess(address) {
@@ -587,6 +594,28 @@ export class Spectrum48 {
     this.pendingContention += delay;
     this.busTState += (this.busAccessCount === 0 ? 4 : 3) + delay;
     this.busAccessCount += 1;
+  }
+
+  trackPortAccess(port) {
+    if (!this.cpuExecuting) return;
+    const highByteContended = ((port >> 14) & 0x03) === 0x01;
+    const ulaPort = (port & 0x0001) === 0;
+    const advance = (duration, contended) => {
+      const delay = contended ? this.ulaContentionDelay(this.busTState) : 0;
+      this.pendingContention += delay;
+      this.busTState += duration + delay;
+    };
+
+    if (ulaPort) {
+      advance(1, highByteContended);
+      advance(3, true);
+      return;
+    }
+    if (highByteContended) {
+      for (let phase = 0; phase < 4; phase += 1) advance(1, true);
+      return;
+    }
+    advance(4, false);
   }
 
   step() {
@@ -648,7 +677,7 @@ export class Spectrum48 {
   }
 
   runFrame() {
-    this.cpu.requestInterrupt(0xff);
+    this.cpu.requestInterrupt(0xff, Spectrum48.INTERRUPT_PULSE_T_STATES);
     const elapsed = this.runTStates(Spectrum48.T_STATES_PER_FRAME);
     this.frame += 1;
     return elapsed;
@@ -675,7 +704,7 @@ export class Spectrum48 {
       this.inputPlayback = null;
     }
 
-    this.cpu.requestInterrupt(0xff);
+    this.cpu.requestInterrupt(0xff, Spectrum48.INTERRUPT_PULSE_T_STATES);
     this.frame += 1;
   }
 

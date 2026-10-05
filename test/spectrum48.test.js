@@ -249,7 +249,7 @@ test("runs CPU work in t-state and frame-sized slices", () => {
   assert.equal(machine.frame, 1);
   assert.equal(elapsed >= Spectrum48.T_STATES_PER_FRAME, true);
   assert.equal(machine.cpu.tStates - frameStart, elapsed);
-  assert.equal(machine.cpu.pendingInterrupt, true);
+  assert.equal(machine.cpu.pendingInterrupt, false);
 });
 
 test("runFrame asserts the interrupt before executing frame CPU work", () => {
@@ -334,6 +334,29 @@ test("applies ULA contention to later memory accesses within an instruction", ()
     + Spectrum48.DISPLAY_FIRST_COLUMN;
   assert.equal(machine.step(), 9);
   assert.equal(machine.cpu.A, 0x5a);
+});
+
+test("models the four 48K I/O contention cases", () => {
+  const machine = new Spectrum48({ rom: makeRom() });
+  const firstContended = (Spectrum48.DISPLAY_FIRST_LINE * Spectrum48.T_STATES_PER_LINE)
+    + Spectrum48.DISPLAY_FIRST_COLUMN - 1;
+
+  const measure = (port) => {
+    machine.cpuExecuting = true;
+    machine.busTState = firstContended;
+    machine.pendingContention = 0;
+    machine.trackPortAccess(port);
+    machine.cpuExecuting = false;
+    return {
+      delay: machine.pendingContention,
+      elapsed: machine.busTState - firstContended
+    };
+  };
+
+  assert.deepEqual(measure(0x00fe), { delay: 5, elapsed: 9 });
+  assert.deepEqual(measure(0x00ff), { delay: 0, elapsed: 4 });
+  assert.deepEqual(measure(0x40fe), { delay: 6, elapsed: 10 });
+  assert.deepEqual(measure(0x40ff), { delay: 12, elapsed: 16 });
 });
 
 test("exposes ULA bitmap and attribute fetches on the floating bus", () => {

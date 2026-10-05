@@ -68,6 +68,7 @@ export class Z80 {
     this.interruptDelay = 0;
     this.pendingInterrupt = false;
     this.interruptData = 0xff;
+    this.interruptExpiresAt = null;
     this.pendingNmi = false;
     this.Q = 0;
     this.halted = false;
@@ -134,13 +135,17 @@ export class Z80 {
     return cycles;
   }
 
-  requestInterrupt(data = 0xff) {
+  requestInterrupt(data = 0xff, durationTStates = null) {
     this.pendingInterrupt = true;
     this.interruptData = data & 0xff;
+    this.interruptExpiresAt = durationTStates === null
+      ? null
+      : this.tStates + Math.max(0, durationTStates);
   }
 
   clearInterrupt() {
     this.pendingInterrupt = false;
+    this.interruptExpiresAt = null;
   }
 
   requestNmi() {
@@ -149,6 +154,11 @@ export class Z80 {
 
   servicePendingInterrupt() {
     if (this.pendingNmi) return this.serviceNmi();
+    if (this.pendingInterrupt
+        && this.interruptExpiresAt !== null
+        && this.tStates >= this.interruptExpiresAt) {
+      this.clearInterrupt();
+    }
     if (!this.pendingInterrupt || !this.IFF1 || this.interruptDelay > 0) return 0;
     return this.serviceMaskableInterrupt();
   }
@@ -169,6 +179,7 @@ export class Z80 {
 
   serviceMaskableInterrupt() {
     this.pendingInterrupt = false;
+    this.interruptExpiresAt = null;
     this.halted = false;
     this.IFF1 = false;
     this.IFF2 = false;
@@ -1607,6 +1618,7 @@ export class Z80 {
       interruptDelay: this.interruptDelay,
       pendingInterrupt: this.pendingInterrupt,
       interruptData: this.interruptData,
+      interruptExpiresAt: this.interruptExpiresAt,
       pendingNmi: this.pendingNmi,
       halted: this.halted,
       tStates: this.tStates,
@@ -1630,6 +1642,7 @@ export class Z80 {
     this.interruptDelay = state.interruptDelay ?? 0;
     this.pendingInterrupt = Boolean(state.pendingInterrupt);
     this.interruptData = state.interruptData ?? 0xff;
+    this.interruptExpiresAt = state.interruptExpiresAt ?? null;
     this.pendingNmi = Boolean(state.pendingNmi);
     this.halted = Boolean(state.halted);
     this.tStates = state.tStates ?? 0;

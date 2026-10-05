@@ -317,6 +317,7 @@ test("setState restores CPU registers and interrupt state", () => {
     interruptDelay: 1,
     pendingInterrupt: true,
     interruptData: 0xcf,
+    interruptExpiresAt: 12345,
     pendingNmi: true,
     halted: true,
     tStates: 1234
@@ -335,6 +336,7 @@ test("setState restores CPU registers and interrupt state", () => {
   assert.equal(cpu.WZ, 0x4567);
   assert.equal(cpu.interruptMode, 2);
   assert.equal(cpu.IFF1, true);
+  assert.equal(cpu.interruptExpiresAt, 12345);
   assert.equal(cpu.pendingNmi, true);
   assert.equal(cpu.halted, true);
   assert.equal(cpu.tStates, 1234);
@@ -2143,6 +2145,23 @@ test("EI delays maskable interrupt acceptance until after the following instruct
   assert.equal(cpu.IFF2, false);
   assert.equal(cpu.SP, 0x8ffe);
   assert.equal(memory.read16(cpu.SP), 0x0002);
+});
+
+test("finite maskable interrupt pulses expire instead of latching forever", () => {
+  const { cpu } = makeCpu([0x00, 0x00, 0x00, 0x00]);
+  cpu.IFF1 = false;
+  cpu.requestInterrupt(0xff, 8);
+
+  assert.equal(cpu.step(), 4);
+  assert.equal(cpu.pendingInterrupt, true);
+  assert.equal(cpu.step(), 4);
+  assert.equal(cpu.pendingInterrupt, true);
+  assert.equal(cpu.step(), 4);
+  assert.equal(cpu.pendingInterrupt, false);
+
+  cpu.IFF1 = true;
+  assert.equal(cpu.step(), 4);
+  assert.notEqual(cpu.PC, 0x0038);
 });
 
 test("maskable IM 1 interrupt wakes HALT and pushes the halted PC", () => {
