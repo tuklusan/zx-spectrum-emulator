@@ -387,11 +387,13 @@ function mountTapeBytes(input, label = "tape") {
 
 function enterRomTapeLoad() {
   machine.pressKey("ENTER");
+  runFrames(2);
+  machine.releaseKey("ENTER");
+
   const deadline = machine.cpu.tStates + (Spectrum48.T_STATES_PER_FRAME * 6);
   while (machine.cpu.PC !== 0x0556 && machine.cpu.tStates < deadline) {
     machine.step();
   }
-  machine.releaseKey("ENTER");
   machine.drainBeeperEvents();
   if (machine.cpu.PC !== 0x0556) {
     throw new Error("Spectrum ROM did not enter the tape loader");
