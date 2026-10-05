@@ -109,6 +109,9 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.equal((index.match(/class="spectrum-key-cell"/g) ?? []).length, 40);
   assert.equal((index.match(/class="key-mosaic"/g) ?? []).length, 8);
   assert.match(index, /id="audioStartGate" class="audio-start-gate" type="button" hidden/);
+  assert.match(index, /<section class="spectrum-keyboard-panel" aria-label="ZX Spectrum keyboard">/);
+  assert.doesNotMatch(index, /id="spectrum-keyboard-title"/);
+  assert.doesNotMatch(index, />ZX Spectrum keyboard<\/h2>/);
   assert.match(index, /Tap to start with sound/);
   assert.match(index, /data-spectrum-key="CAPS SHIFT"/);
   assert.match(index, /data-spectrum-key="SYMBOL SHIFT"/);
