@@ -201,6 +201,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   const enterLoadFunction = app.slice(app.indexOf("function enterRomTapeLoad"), app.indexOf("function autoloadMountedTape"));
   assert.match(enterLoadFunction, /machine\.pressKey\("ENTER"\)/);
   assert.match(enterLoadFunction, /machine\.cpu\.PC !== 0x0556/);
+  assert.match(enterLoadFunction, /machine\.cpu\.requestInterrupt\(0xff\)/);
   assert.match(enterLoadFunction, /machine\.releaseKey\("ENTER"\)/);
   assert.match(enterLoadFunction, /Spectrum48\.T_STATES_PER_FRAME \* 2/);
   assert.match(enterLoadFunction, /Spectrum48\.T_STATES_PER_FRAME \* 4/);

@@ -386,8 +386,14 @@ function mountTapeBytes(input, label = "tape") {
 }
 
 function enterRomTapeLoad() {
+  let nextInterruptTState = machine.cpu.tStates;
   const runUntilLoaderOr = (deadline) => {
     while (machine.cpu.PC !== 0x0556 && machine.cpu.tStates < deadline) {
+      if (machine.cpu.tStates >= nextInterruptTState) {
+        machine.cpu.requestInterrupt(0xff);
+        machine.frame += 1;
+        nextInterruptTState += Spectrum48.T_STATES_PER_FRAME;
+      }
       machine.step();
     }
     return machine.cpu.PC === 0x0556;
