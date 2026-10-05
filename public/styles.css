@@ -2448,3 +2448,47 @@ dd {
 .audio-start-gate small{max-width:28rem;color:#d9d8cc;font-size:clamp(12px,2vw,16px);font-weight:700;line-height:1.3}
 .audio-start-gate:focus-visible{outline:4px solid #f3d447;outline-offset:-6px}
 .audio-start-gate:disabled{cursor:wait;opacity:.92}
+
+
+/* Original 48K key legends: tiny, colourful, and gloriously overcrowded. */
+.spectrum-keyboard{display:flex;flex-direction:column;gap:clamp(3px,.45vw,5px);padding:clamp(6px,.9vw,10px);border:1px solid #171515;border-radius:8px;background:linear-gradient(#3b3939,#292727);box-shadow:inset 0 1px rgba(255,255,255,.08),inset 0 -4px rgba(0,0,0,.25);touch-action:none;user-select:none;-webkit-user-select:none}
+.spectrum-key-row{display:flex;gap:clamp(3px,.5vw,6px);align-items:stretch}
+.spectrum-key-cell{display:flex;flex:1 1 0;min-width:0;flex-direction:column}
+.spectrum-key-row:nth-child(3) .spectrum-key-cell:last-child{flex:1.28 1 0}
+.spectrum-key-row:nth-child(4) .spectrum-key-cell:nth-child(1){flex:1.35 1 0}
+.spectrum-key-row:nth-child(4) .spectrum-key-cell:nth-child(9){flex:1.12 1 0}
+.spectrum-key-row:nth-child(4) .spectrum-key-cell:nth-child(10){flex:1.55 1 0}
+.spectrum-key-top,.spectrum-key-bottom{min-width:0;display:flex;align-items:center;justify-content:center;gap:2px;white-space:nowrap;overflow:visible;font-family:Arial,"Helvetica Neue",sans-serif;font-weight:900;text-align:center;pointer-events:none}
+.spectrum-key-top{height:clamp(14px,2vw,19px);flex-direction:column;gap:0;justify-content:flex-end;padding-bottom:2px}
+.spectrum-key-bottom{height:clamp(11px,1.65vw,16px);align-items:flex-start;padding-top:3px;color:#e06d56;font-size:clamp(6px,.86vw,8px);line-height:1;letter-spacing:.02em}
+.legend{display:block;font-size:clamp(6px,.86vw,8px);line-height:.92;letter-spacing:-.015em}
+.legend.green{color:#58c67a}.legend.blue{color:#49a9df}.legend.red{color:#eb715c}.legend.magenta{color:#eb78d2}.legend.cyan{color:#71d8db}.legend.yellow{color:#f3db5d}.legend.white,.legend.arrow{color:#f5f1e9}.legend.black{color:#151515;background:#f1f0ea;padding:0 2px;border-radius:1px}
+.spectrum-key{position:relative;display:block;width:100%;height:clamp(44px,5.8vw,56px);min-width:0;min-height:0;border:1px solid #0a0909;border-radius:4px;background:linear-gradient(180deg,#464343 0%,#343131 44%,#262424 100%);box-shadow:inset 0 1px rgba(255,255,255,.15),inset 0 -4px rgba(0,0,0,.56),0 2px 1px rgba(0,0,0,.7);color:#f6f3eb;padding:0;font-family:Arial,"Helvetica Neue",sans-serif;font-weight:900;letter-spacing:0;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.key-main{position:absolute;left:10%;top:22%;font-size:clamp(17px,2.4vw,23px);line-height:1}
+.key-keyword{position:absolute;left:5%;right:5%;bottom:8%;font-size:clamp(7px,1.04vw,10px);line-height:1;text-align:center;white-space:nowrap}
+.key-symbol{position:absolute;right:8%;top:40%;color:#d96b55;font-size:clamp(6px,.94vw,9px);line-height:1;font-weight:900;white-space:nowrap}
+.key-mosaic{position:absolute;right:9%;top:15%;display:grid;grid-template-columns:repeat(2,clamp(4px,.62vw,6px));grid-template-rows:repeat(2,clamp(4px,.62vw,6px));width:clamp(8px,1.24vw,12px);height:clamp(8px,1.24vw,12px);background:#343131}
+.key-mosaic i{display:block;background:#343131}.key-mosaic i.on{background:#f2efe6}
+.key-special-main{display:flex;height:100%;align-items:center;justify-content:center;text-align:center;font-size:clamp(8px,1.14vw,11px);line-height:1.05;letter-spacing:-.01em}
+.special-symbol .key-special-main{color:#df705c;font-size:clamp(6px,.84vw,8px)}.special-caps .key-special-main,.special-space .key-special-main,.special-enter .key-special-main{font-size:clamp(7px,1.04vw,10px)}
+.spectrum-key[data-spectrum-key="CAPS SHIFT"]{color:#f6f3eb}.spectrum-key[data-spectrum-key="SYMBOL SHIFT"]{color:#df705c}
+.spectrum-key.is-pressed,.spectrum-key:active{transform:translateY(2px);background:linear-gradient(180deg,#282626,#3a3737);box-shadow:inset 0 2px rgba(0,0,0,.55)}
+.spectrum-key.is-latched{border-color:#16c7bd;outline:2px solid rgba(22,199,189,.62);background:linear-gradient(180deg,#1c4945,#102522)}
+@media(max-width:760px){
+.spectrum-keyboard{gap:3px;padding:5px 4px}.spectrum-key-row{gap:3px}
+.spectrum-key-top{height:12px;padding-bottom:1px}.spectrum-key-bottom{height:10px;padding-top:2px}
+.legend,.spectrum-key-bottom{font-size:clamp(4.8px,1.42vw,6px)}
+.spectrum-key{height:clamp(38px,10vw,42px)}
+.key-main{left:8%;top:23%;font-size:clamp(13px,4.2vw,17px)}
+.key-keyword{font-size:clamp(5.2px,1.72vw,7px);bottom:7%}
+.key-symbol{right:6%;top:40%;font-size:clamp(4.8px,1.55vw,6px)}
+.key-mosaic{right:6%;top:13%;grid-template-columns:repeat(2,clamp(3px,1.05vw,4px));grid-template-rows:repeat(2,clamp(3px,1.05vw,4px));width:clamp(6px,2.1vw,8px);height:clamp(6px,2.1vw,8px)}
+.key-special-main{font-size:clamp(5.5px,1.8vw,7px)}.special-symbol .key-special-main{font-size:clamp(4.5px,1.45vw,5.5px)}.special-caps .key-special-main,.special-space .key-special-main,.special-enter .key-special-main{font-size:clamp(5px,1.65vw,6.5px)}
+}
+@media(max-width:430px){
+.spectrum-keyboard-panel{padding:4px}.spectrum-keyboard{padding:4px 2px}.spectrum-key-row{gap:2px}
+.spectrum-key-top{height:11px}.spectrum-key-bottom{height:9px}
+.legend,.spectrum-key-bottom{font-size:4.8px}
+.spectrum-key{height:38px;border-radius:3px}
+.key-main{font-size:14px}.key-keyword{font-size:5.2px}.key-symbol{font-size:4.8px}
+}

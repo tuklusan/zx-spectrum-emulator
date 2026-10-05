@@ -106,10 +106,21 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.ok(mediaStatusIndex > mediaUrlLoadIndex);
   assert.ok(advancedIndex > mediaStatusIndex);
   assert.equal((index.match(/data-spectrum-key="/g) ?? []).length, 40);
+  assert.equal((index.match(/class="spectrum-key-cell"/g) ?? []).length, 40);
+  assert.equal((index.match(/class="key-mosaic"/g) ?? []).length, 8);
   assert.match(index, /id="audioStartGate" class="audio-start-gate" type="button" hidden/);
   assert.match(index, /Tap to start with sound/);
   assert.match(index, /data-spectrum-key="CAPS SHIFT"/);
   assert.match(index, /data-spectrum-key="SYMBOL SHIFT"/);
+  assert.match(index, /<span class="legend blue">BLUE<\/span><span class="legend white">EDIT<\/span>/);
+  assert.match(index, /<span class="legend magenta">MAGENTA<\/span><span class="legend white">TRUE VIDEO<\/span>/);
+  assert.match(index, /<span class="legend black">BLACK<\/span><span class="legend white">DELETE<\/span>/);
+  assert.match(index, /<span class="legend green">SIN<\/span>/);
+  assert.match(index, /<span class="key-symbol">&lt;=<\/span>/);
+  assert.match(index, /<span class="key-keyword">PLOT<\/span>/);
+  assert.match(index, /<span class="spectrum-key-bottom">ASN<\/span>/);
+  assert.match(index, /<span class="legend green">IN KEY \$<\/span>/);
+  assert.match(index, /<span class="key-special-main">BREAK<br>SPACE<\/span>/);
   assert.match(index, /<details id="advancedTools" class="advanced-tools">/);
   assert.doesNotMatch(index, /<details id="advancedTools" class="advanced-tools" open/);
   assert.match(index, /<details id="debugWorkbench" class="debug-drawer">/);
@@ -137,6 +148,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.doesNotMatch(index, /id="tapFile"/);
   assert.doesNotMatch(index, /id="snapshotFile"/);
 
+  assert.match(index, /styles\.css\?v=20261005-spectrum-legends/);
   assert.match(app, /softKeyboard\?\.querySelectorAll/);
   assert.match(app, /pointerdown/);
   assert.match(app, /latchedSoftModifiers/);
