@@ -171,6 +171,14 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /new RzxPlayback\(machine, recording\)/);
   assert.match(app, /unwrapSpectrumMedia/);
   assert.match(app, /async function loadSpectrumMedia\(/);
+  assert.match(app, /function beginMediaRequest\(\)/);
+  assert.match(app, /mediaRequestController\?\.abort\(\)/);
+  assert.match(app, /signal: request\?\.controller\.signal/);
+  assert.match(app, /function clearStartupMediaQuery\(\)/);
+  assert.match(app, /history\.replaceState\(history\.state, "", url\.href\)/);
+  assert.match(app, /url\.searchParams\.delete\("tape"\)/);
+  assert.match(app, /url\.searchParams\.delete\("autoload"\)/);
+  assert.match(app, /async function replaceSpectrumMedia/);
   assert.doesNotMatch(app, /loadSpectrumMediaBytes/);
   assert.doesNotMatch(app, /loadSpectrumMediaFromUrl/);
   assert.doesNotMatch(app, /mediaAutoloadTapeInput/);
@@ -178,6 +186,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.doesNotMatch(app, /loadTapEntry/);
   assert.match(app, /function prepareAutoloadAudio/);
   assert.match(app, /function waitForAutoloadAudioGesture/);
+  assert.match(app, /waitForAutoloadAudioGesture\(request\.controller\.signal\)/);
   const autoloadFunction = app.slice(app.indexOf("function autoloadMountedTape"), app.indexOf("function audioIsRunning"));
   assert.ok(autoloadFunction.indexOf('tapSpectrumKeys(["ENTER"]') < autoloadFunction.indexOf("startTapePlayback"));
   assert.ok(autoloadFunction.indexOf("setTapeCursor(0)") < autoloadFunction.indexOf('tapSpectrumKeys(["ENTER"]'));

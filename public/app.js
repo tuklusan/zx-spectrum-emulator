@@ -102,6 +102,8 @@ let sourceRows = [];
 let assemblerReferenceInitialized = false;
 let lastDrawTime;
 let frameAccumulatorMs = 0;
+let mediaRequestGeneration = 0;
+let mediaRequestController;
 
 initializeDebugWindows({ onStatus: (message) => { statusOutput.value = message; } });
 
@@ -413,23 +415,77 @@ function prepareAutoloadAudio() {
   }
 }
 
-function waitForAutoloadAudioGesture() {
+function mediaAbortError() {
+  const error = new Error("Media load superseded by a newer request");
+  error.name = "AbortError";
+  return error;
+}
+
+function isMediaAbort(error) {
+  return error?.name === "AbortError";
+}
+
+function beginMediaRequest() {
+  mediaRequestController?.abort();
+  const controller = new AbortController();
+  const request = { generation: ++mediaRequestGeneration, controller };
+  mediaRequestController = controller;
+  return request;
+}
+
+function mediaRequestIsCurrent(request) {
+  return request.generation === mediaRequestGeneration && !request.controller.signal.aborted;
+}
+
+function assertCurrentMediaRequest(request) {
+  if (!mediaRequestIsCurrent(request)) throw mediaAbortError();
+}
+
+function finishMediaRequest(request) {
+  if (mediaRequestIsCurrent(request)) mediaRequestController = undefined;
+}
+
+function clearStartupMediaQuery() {
+  const url = new URL(window.location.href);
+  const hadStartupMedia = url.searchParams.has("tape") || url.searchParams.has("autoload");
+  if (!hadStartupMedia) return;
+  url.searchParams.delete("tape");
+  url.searchParams.delete("autoload");
+  history.replaceState(history.state, "", url.href);
+}
+
+function waitForAutoloadAudioGesture(signal) {
   audioStartGate.hidden = false;
   statusOutput.value = "Tap to start with sound";
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      audioStartGate.removeEventListener("click", startWithSound);
+      signal?.removeEventListener("abort", cancel);
+    };
+    const cancel = () => {
+      cleanup();
+      audioStartGate.hidden = true;
+      audioStartGate.disabled = false;
+      reject(mediaAbortError());
+    };
     const startWithSound = async () => {
       audioStartGate.disabled = true;
       try {
         audio ??= new BeeperAudio();
         await audio.resume();
         if (!audioIsRunning()) throw new Error("Audio is still blocked");
+        if (signal?.aborted) throw mediaAbortError();
         audio.reset(machine.cpu.tStates);
         audioStartGate.hidden = true;
         audioStartGate.disabled = false;
-        audioStartGate.removeEventListener("click", startWithSound);
+        cleanup();
         resolve();
-      } catch {
+      } catch (error) {
+        if (isMediaAbort(error)) {
+          cancel();
+          return;
+        }
         audioStartGate.disabled = false;
         audioStartGate.querySelector("small").textContent = "Audio is still blocked. Tap again.";
         statusOutput.value = "Waiting for sound";
@@ -437,6 +493,8 @@ function waitForAutoloadAudioGesture() {
     };
 
     audioStartGate.addEventListener("click", startWithSound);
+    signal?.addEventListener("abort", cancel, { once: true });
+    if (signal?.aborted) cancel();
   });
 }
 
@@ -445,9 +503,19 @@ async function loadTapeQueryParameters() {
   const tapeUrl = params.get("tape");
   if (!tapeUrl) return;
 
-  await loadSpectrumMedia(tapeUrl, { requireTape: true, deferTapeAutoload: true });
-  if (!prepareAutoloadAudio()) await waitForAutoloadAudioGesture();
-  autoloadMountedTape();
+  const request = beginMediaRequest();
+  try {
+    await loadSpectrumMedia(tapeUrl, {
+      requireTape: true,
+      deferTapeAutoload: true,
+      request
+    });
+    if (!prepareAutoloadAudio()) await waitForAutoloadAudioGesture(request.controller.signal);
+    assertCurrentMediaRequest(request);
+    autoloadMountedTape();
+  } finally {
+    finishMediaRequest(request);
+  }
 }
 
 function clearMountedTape() {
@@ -466,8 +534,9 @@ function loadSnapshotBytes(input, label, type) {
   return snapshot;
 }
 
-async function loadRzxBytes(input, label) {
+async function loadRzxBytes(input, label, { beforeApply = () => {} } = {}) {
   const recording = await parseRzx(input);
+  beforeApply();
   clearMountedTape();
   rzxPlayback = new RzxPlayback(machine, recording);
   rzxPlaying = false;
@@ -487,7 +556,8 @@ async function loadRzxBytes(input, label) {
 async function loadSpectrumMedia(source, {
   label = "media",
   requireTape = false,
-  deferTapeAutoload = false
+  deferTapeAutoload = false,
+  request
 } = {}) {
   let input = source;
   let sourceLabel = label;
@@ -496,35 +566,59 @@ async function loadSpectrumMedia(source, {
   if (typeof source === "string") {
     resolvedUrl = normalizeRemoteFileUrl(source, window.location.href, "Media");
     statusOutput.value = "Fetching media from " + resolvedUrl;
-    const response = await fetch(resolvedUrl, { mode: "cors" });
+    const response = await fetch(resolvedUrl, {
+      mode: "cors",
+      signal: request?.controller.signal
+    });
     if (!response.ok) throw new Error("Media fetch failed: HTTP " + response.status);
     input = await response.arrayBuffer();
     sourceLabel = response.url || resolvedUrl;
+  } else if (source && typeof source.arrayBuffer === "function") {
+    input = await source.arrayBuffer();
+    sourceLabel = source.name || label;
   }
 
+  if (request) assertCurrentMediaRequest(request);
   const media = await unwrapSpectrumMedia(input, sourceLabel);
+  if (request) assertCurrentMediaRequest(request);
   const displayLabel = displayMediaName(media);
   if (requireTape && media.type !== "tap" && media.type !== "tzx") {
     throw new Error(`Tape URL contains ${media.type.toUpperCase()} media, not TAP/TZX`);
   }
 
   if (media.type === "tap" || media.type === "tzx") {
+    if (request) assertCurrentMediaRequest(request);
     clearRzxPlayback();
     mountTapeBytes(media.bytes, displayLabel);
     if (!deferTapeAutoload) autoloadMountedTape();
     return { media, resolvedUrl };
   }
   if (media.type === "sna" || media.type === "z80") {
+    if (request) assertCurrentMediaRequest(request);
     loadSnapshotBytes(media.bytes, displayLabel, media.type);
     setLoadedMediaLabel(displayLabel);
     return { media, resolvedUrl };
   }
   if (media.type === "rzx") {
-    await loadRzxBytes(media.bytes, displayLabel);
+    await loadRzxBytes(media.bytes, displayLabel, {
+      beforeApply: () => request && assertCurrentMediaRequest(request)
+    });
     setLoadedMediaLabel(displayLabel);
     return { media, resolvedUrl };
   }
   throw new Error(`Unsupported Spectrum media type ${media.type}`);
+}
+
+async function replaceSpectrumMedia(source, options = {}) {
+  const request = beginMediaRequest();
+  try {
+    const result = await loadSpectrumMedia(source, { ...options, request });
+    assertCurrentMediaRequest(request);
+    clearStartupMediaQuery();
+    return result;
+  } finally {
+    finishMediaRequest(request);
+  }
 }
 
 function clearMediaError() {
@@ -1046,9 +1140,9 @@ mediaFileInput.addEventListener("change", async () => {
 
   clearMediaError();
   try {
-    await loadSpectrumMedia(await file.arrayBuffer(), { label: file.name });
+    await replaceSpectrumMedia(file, { label: file.name });
   } catch (error) {
-    showMediaError(error);
+    if (!isMediaAbort(error)) showMediaError(error);
   }
 });
 
@@ -1061,13 +1155,10 @@ mediaUrlLoadButton.addEventListener("click", async () => {
     return;
   }
 
-  mediaUrlLoadButton.disabled = true;
   try {
-    await loadSpectrumMedia(rawUrl);
+    await replaceSpectrumMedia(rawUrl);
   } catch (error) {
-    showMediaError(error);
-  } finally {
-    mediaUrlLoadButton.disabled = false;
+    if (!isMediaAbort(error)) showMediaError(error);
   }
 });
 
@@ -1179,7 +1270,7 @@ try {
   try {
     await loadTapeQueryParameters();
   } catch (error) {
-    statusOutput.value = error.message;
+    if (!isMediaAbort(error)) statusOutput.value = error.message;
   }
   draw();
 } catch (error) {
