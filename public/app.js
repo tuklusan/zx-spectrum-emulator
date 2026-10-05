@@ -86,7 +86,7 @@ let rom;
 let machine;
 let audio;
 let audioEnabled = true;
-const TAPE_TURBO_FRAMES_PER_DRAW = 32;
+const TAPE_TURBO_BUDGET_MS = 8;
 const SPECTRUM_FRAME_MS = 20;
 const MAX_FRAME_CATCHUP = 5;
 let running = true;
@@ -208,12 +208,11 @@ function runMachineFrame({ audioOutput = true } = {}) {
 }
 
 function runFastTapeBurst() {
-  let frames = 0;
-  while (machine.tapePlaying && frames < TAPE_TURBO_FRAMES_PER_DRAW) {
+  const started = performance.now();
+  do {
     machine.runFrame();
     machine.drainBeeperEvents();
-    frames += 1;
-  }
+  } while (machine.tapePlaying && performance.now() - started < TAPE_TURBO_BUDGET_MS);
   if (!machine.tapePlaying && audio) audio.reset(machine.cpu.tStates);
 }
 

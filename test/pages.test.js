@@ -210,6 +210,10 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /renderFrameRgba\(\{ flashOn, target: frameImageData\.data \}\)/);
   assert.doesNotMatch(app, /new ImageData\(frame/);
   assert.match(app, /frameAccumulatorMs \+= elapsed/);
+  assert.match(app, /const TAPE_TURBO_BUDGET_MS = 8/);
+  assert.match(app, /const started = performance\.now\(\)/);
+  assert.match(app, /performance\.now\(\) - started < TAPE_TURBO_BUDGET_MS/);
+  assert.doesNotMatch(app, /TAPE_TURBO_FRAMES_PER_DRAW/);
   assert.match(app, /while \(frameAccumulatorMs >= SPECTRUM_FRAME_MS/);
   assert.match(app, /function runRzxFrame/);
   assert.match(app, /pumpAudio\(\);/);
