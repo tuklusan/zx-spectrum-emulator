@@ -22,6 +22,23 @@ test("creates beeper samples from timed transitions", () => {
   assert.equal(result.level, false);
 });
 
+test("consumes chronological beeper events without copying or sorting", () => {
+  const events = Object.freeze([
+    Object.freeze({ tState: 1, on: true }),
+    Object.freeze({ tState: 3, on: false })
+  ]);
+  const result = createBeeperSamples(events, {
+    fromTState: 0,
+    toTState: 4,
+    initialLevel: false,
+    sampleRate: 4,
+    tStatesPerSecond: 4,
+    amplitude: 1
+  });
+  assert.deepEqual(Array.from(result.samples), [0, 1, 1, 0]);
+  assert.equal(result.level, false);
+});
+
 test("continues beeper level when no transition occurs", () => {
   const result = createBeeperSamples([], {
     fromTState: 0,

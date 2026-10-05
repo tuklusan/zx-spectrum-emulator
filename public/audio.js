@@ -16,19 +16,19 @@ export function createBeeperSamples(
   const samples = new Float32Array(sampleCount);
   let level = initialLevel;
   let eventIndex = 0;
-  const sortedEvents = [...events].sort((a, b) => a.tState - b.tState);
+  const tStatesPerSample = tStatesPerSecond / sampleRate;
 
   for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex += 1) {
-    const tState = fromTState + Math.floor((sampleIndex / sampleRate) * tStatesPerSecond);
-    while (eventIndex < sortedEvents.length && sortedEvents[eventIndex].tState <= tState) {
-      level = sortedEvents[eventIndex].on;
+    const tState = fromTState + Math.floor(sampleIndex * tStatesPerSample);
+    while (eventIndex < events.length && events[eventIndex].tState <= tState) {
+      level = events[eventIndex].on;
       eventIndex += 1;
     }
     samples[sampleIndex] = level ? amplitude : 0;
   }
 
-  while (eventIndex < sortedEvents.length && sortedEvents[eventIndex].tState <= toTState) {
-    level = sortedEvents[eventIndex].on;
+  while (eventIndex < events.length && events[eventIndex].tState <= toTState) {
+    level = events[eventIndex].on;
     eventIndex += 1;
   }
 
