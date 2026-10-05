@@ -19,9 +19,8 @@ const fixtures = [
   },
   {
     name: "dreamwalker",
-    // The Spectrum Computing copy is the archive reference. Its browser-facing
-    // mirror is currently unreliable, so use the author's ZIP for the live gate.
-    url: "https://www.retrosouls.net/zx/dreamwalker.zip",
+    sourceUrl: "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip",
+    browserPath: "/__fixtures/DreamWalker(48K).tzx.zip",
     budgetMs: 30_000
   }
 ];
@@ -30,6 +29,8 @@ const viewports = [
   { name: "mobile", width: 390, height: 844 },
   { name: "desktop", width: 1440, height: 1000 }
 ];
+
+const fixtureBodies = new Map();
 
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -56,6 +57,15 @@ function findChrome() {
 function staticServer() {
   return createServer((request, response) => {
     const requestUrl = new URL(request.url, BASE);
+    const fixture = fixtureBodies.get(requestUrl.pathname);
+    if (fixture) {
+      response.writeHead(200, {
+        "content-length": fixture.length,
+        "content-type": "application/zip"
+      });
+      response.end(fixture);
+      return;
+    }
     const relative = requestUrl.pathname === "/" ? "index.html" : requestUrl.pathname.replace(/^\/+/, "");
     const path = resolve(ROOT, relative);
     if (!path.startsWith(ROOT)) {
@@ -105,7 +115,10 @@ function runChrome(chrome, args, timeoutMs = 75_000) {
   });
 }
 
-function directLaunchUrl(tapeUrl) {
+function directLaunchUrl(fixture) {
+  const tapeUrl = fixture.browserPath
+    ? new URL(fixture.browserPath, BASE).href
+    : fixture.url;
   const url = new URL(BASE);
   url.searchParams.set("tape", tapeUrl);
   url.searchParams.set("autoload", "1");
@@ -117,9 +130,9 @@ function assertHealthyDom(html, label) {
   const status = html.match(/<output[^>]*id="status"[^>]*>([^<]*)<\/output>/i)?.[1]?.trim() ?? "";
   const mediaStatusTag = html.match(/<output[^>]*id="mediaStatus"[^>]*>/i)?.[0] ?? "";
   const mediaStatus = html.match(/<output[^>]*id="mediaStatus"[^>]*>([^<]*)<\/output>/i)?.[1]?.trim() ?? "";
-  if (/fail|error|unsupported/i.test(status)
+  if (status !== 'Autoload started with LOAD ""'
       || (/fail|error|unsupported/i.test(mediaStatus) && !/hidden(?:=""|\s|>)/i.test(mediaStatusTag))) {
-    throw new Error(`${label}: browser page reports a media-load failure: ${status || mediaStatus}`);
+    throw new Error(`${label}: browser tape did not reach autoload: ${status || mediaStatus || "(no status)"}`);
   }
   const gate = html.match(/<button[^>]*id="audioStartGate"[^>]*>/i)?.[0] ?? "";
   if (gate && !/hidden(?:=""|\s|>)/i.test(gate)) {
@@ -128,6 +141,17 @@ function assertHealthyDom(html, label) {
 }
 
 await mkdir(OUTPUT, { recursive: true });
+for (const fixture of fixtures) {
+  if (!fixture.browserPath) continue;
+  const response = await fetch(fixture.sourceUrl, { redirect: "follow" });
+  if (!response.ok) {
+    throw new Error(`${fixture.name}: fixture fetch failed with HTTP ${response.status}`);
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.length < 1_000) throw new Error(`${fixture.name}: fixture download is unexpectedly small`);
+  fixtureBodies.set(fixture.browserPath, bytes);
+  console.log(`Fetched ${fixture.name} fixture: ${bytes.length} bytes`);
+}
 const chrome = findChrome();
 const server = staticServer();
 await new Promise((resolveListen, rejectListen) => {
@@ -142,7 +166,7 @@ try {
       const profile = await mkdtemp(join(tmpdir(), "zx-browser-"));
       const screenshot = join(OUTPUT, `${label}.png`);
       const domPath = join(OUTPUT, `${label}.html`);
-      const url = directLaunchUrl(fixture.url);
+      const url = directLaunchUrl(fixture);
       console.log(`Browser regression: ${label}`);
       try {
         const { stdout } = await runChrome(chrome, [
