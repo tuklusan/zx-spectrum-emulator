@@ -149,6 +149,10 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.doesNotMatch(index, /id="snapshotFile"/);
 
   assert.match(index, /styles\.css\?v=20261005-spectrum-legends/);
+  const styles = await readFile("public/styles.css", "utf8");
+  assert.match(styles, /spectrum-key-row:nth-child\(2\)\{padding-left:4%\}/);
+  assert.match(styles, /spectrum-key-row:nth-child\(3\)\{padding-left:6%\}/);
+  assert.match(styles, /key-mosaic i\.on\{background:#343131\}/);
   assert.match(app, /softKeyboard\?\.querySelectorAll/);
   assert.match(app, /pointerdown/);
   assert.match(app, /latchedSoftModifiers/);

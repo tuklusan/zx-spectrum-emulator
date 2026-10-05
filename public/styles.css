@@ -2492,3 +2492,11 @@ dd {
 .spectrum-key{height:38px;border-radius:3px}
 .key-main{font-size:14px}.key-keyword{font-size:5.2px}.key-symbol{font-size:4.8px}
 }
+
+
+/* The real rubber keyboard staggers its middle rows; its mosaic legends are dark cuts in a white square. */
+.spectrum-key-row:nth-child(2){padding-left:4%}
+.spectrum-key-row:nth-child(3){padding-left:6%}
+.key-mosaic{right:9%;top:13%;grid-template-columns:repeat(2,clamp(6px,.9vw,9px));grid-template-rows:repeat(2,clamp(6px,.9vw,9px));width:clamp(12px,1.8vw,18px);height:clamp(12px,1.8vw,18px);background:#f2efe6}
+.key-mosaic i{background:#f2efe6}.key-mosaic i.on{background:#343131}
+@media(max-width:760px){.key-mosaic{right:6%;top:12%;grid-template-columns:repeat(2,clamp(4px,1.3vw,5px));grid-template-rows:repeat(2,clamp(4px,1.3vw,5px));width:clamp(8px,2.6vw,10px);height:clamp(8px,2.6vw,10px)}}
