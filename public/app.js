@@ -27,6 +27,7 @@ import { normalizeRemoteFileUrl, normalizeTapeUrl } from "./tape-url.js?v=202610
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
 const rasterOverlay = document.querySelector("#rasterOverlay");
+const audioStartGate = document.querySelector("#audioStartGate");
 const rasterContext = rasterOverlay.getContext("2d");
 const statusOutput = document.querySelector("#status");
 const frameOutput = document.querySelector("#frame");
@@ -387,12 +388,64 @@ async function loadTapeFromUrl(rawUrl, { autoload = false } = {}) {
   return resolvedUrl;
 }
 
+function audioIsRunning() {
+  return audio?.context?.state === "running";
+}
+
+function prepareAutoloadAudio() {
+  if (!audioEnabled) return true;
+  try {
+    audio ??= new BeeperAudio();
+    if (!audioIsRunning()) return false;
+    audio.reset(machine.cpu.tStates);
+    return true;
+  } catch (error) {
+    statusOutput.value = error.message;
+    return true;
+  }
+}
+
+function waitForAutoloadAudioGesture() {
+  audioStartGate.hidden = false;
+  statusOutput.value = "Tap to start with sound";
+
+  return new Promise((resolve) => {
+    const startWithSound = async () => {
+      audioStartGate.disabled = true;
+      try {
+        audio ??= new BeeperAudio();
+        await audio.resume();
+        if (!audioIsRunning()) throw new Error("Audio is still blocked");
+        audio.reset(machine.cpu.tStates);
+        audioStartGate.hidden = true;
+        audioStartGate.disabled = false;
+        audioStartGate.removeEventListener("click", startWithSound);
+        resolve();
+      } catch {
+        audioStartGate.disabled = false;
+        audioStartGate.querySelector("small").textContent = "Audio is still blocked. Tap again.";
+        statusOutput.value = "Waiting for sound";
+      }
+    };
+
+    audioStartGate.addEventListener("click", startWithSound);
+  });
+}
+
 async function loadTapeQueryParameters() {
   const params = new URLSearchParams(window.location.search);
   const tapeUrl = params.get("tape");
   if (!tapeUrl) return;
   const autoload = /^(1|true|yes)$/i.test(params.get("autoload") ?? "");
-  await loadTapeFromUrl(tapeUrl, { autoload });
+
+  if (!autoload) {
+    await loadTapeFromUrl(tapeUrl);
+    return;
+  }
+
+  await loadTapeFromUrl(tapeUrl);
+  if (!prepareAutoloadAudio()) await waitForAutoloadAudioGesture();
+  autoloadMountedTape();
 }
 
 function clearMountedTape() {
@@ -924,6 +977,7 @@ async function enableDefaultAudioFromGesture() {
   try {
     audio ??= new BeeperAudio();
     await audio.resume();
+    if (!audioIsRunning()) return;
     audio.reset(machine.cpu.tStates);
     document.removeEventListener("pointerdown", enableDefaultAudioFromGesture);
     document.removeEventListener("keydown", enableDefaultAudioFromGesture);

@@ -42,7 +42,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-media-errors"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-audio-gate"/);
   assert.match(spectrum, /id="audioToggle"[^>]*aria-pressed="true"[^>]*>Sound On<\/button>/);
   assert.match(spectrum, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/index\.html">Machines</);
@@ -89,6 +89,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   const app = await readFile("public/app.js", "utf8");
 
   const screenIndex = index.indexOf('id="screen"');
+  const audioGateIndex = index.indexOf('id="audioStartGate"');
   const keyboardIndex = index.indexOf('id="spectrumKeyboard"');
   const mediaFileIndex = index.indexOf('id="mediaFile"');
   const mediaUrlIndex = index.indexOf('id="mediaUrl"');
@@ -97,13 +98,16 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   const advancedIndex = index.indexOf('id="advancedTools"');
 
   assert.ok(screenIndex >= 0);
-  assert.ok(keyboardIndex > screenIndex);
+  assert.ok(audioGateIndex > screenIndex);
+  assert.ok(keyboardIndex > audioGateIndex);
   assert.ok(mediaFileIndex > keyboardIndex);
   assert.ok(mediaUrlIndex > mediaFileIndex);
   assert.ok(mediaUrlLoadIndex > mediaUrlIndex);
   assert.ok(mediaStatusIndex > mediaUrlLoadIndex);
   assert.ok(advancedIndex > mediaStatusIndex);
   assert.equal((index.match(/data-spectrum-key="/g) ?? []).length, 40);
+  assert.match(index, /id="audioStartGate" class="audio-start-gate" type="button" hidden/);
+  assert.match(index, /Tap to start with sound/);
   assert.match(index, /data-spectrum-key="CAPS SHIFT"/);
   assert.match(index, /data-spectrum-key="SYMBOL SHIFT"/);
   assert.match(index, /<details id="advancedTools" class="advanced-tools">/);
@@ -146,6 +150,11 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /loadSpectrumMediaBytes/);
   assert.match(app, /loadSpectrumMediaFromUrl/);
   assert.match(app, /mediaAutoloadTapeInput\.checked/);
+  assert.match(app, /function prepareAutoloadAudio/);
+  assert.match(app, /function waitForAutoloadAudioGesture/);
+  assert.match(app, /if \(!prepareAutoloadAudio\(\)\) await waitForAutoloadAudioGesture\(\)/);
+  assert.match(app, /audioStartGate\.hidden = false/);
+  assert.match(app, /await audio\.resume\(\)/);
   assert.match(app, /function showMediaError/);
   assert.match(app, /load failed\|failed to fetch/);
   assert.match(app, /remote server blocked browser access \(CORS\)/);

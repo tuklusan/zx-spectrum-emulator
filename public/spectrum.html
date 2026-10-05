@@ -14,7 +14,7 @@
     <meta name="twitter:title" content="ZX Spectrum Online Emulator | JavaScript 48K Web Emulator">
     <meta name="twitter:description" content="JavaScript ZX Spectrum 48K web emulator with TAP/TZX, SNA/Z80, RZX, BASIC and Z80 debugging tools.">
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./public/styles.css?v=20261005-media-errors">
+    <link rel="stylesheet" href="./public/styles.css?v=20261005-audio-gate">
     <link rel="stylesheet" href="./public/seo.css">
   </head>
   <body class="spectrum-page-body">
@@ -29,7 +29,7 @@
 <section class="spectrum-play-console" aria-label="ZX Spectrum 48K emulator">
 <div class="screen-window spectrum-screen-window">
 <header class="window-header spectrum-screen-header"><h2>ZX Spectrum 48K</h2><output id="status">Loading ROM...</output></header>
-<div class="screen-wrap"><canvas id="screen" width="320" height="240" tabindex="0" aria-label="ZX Spectrum display"></canvas><canvas id="rasterOverlay" width="320" height="240" aria-hidden="true"></canvas></div>
+<div class="screen-wrap"><canvas id="screen" width="320" height="240" tabindex="0" aria-label="ZX Spectrum display"></canvas><canvas id="rasterOverlay" width="320" height="240" aria-hidden="true"></canvas><button id="audioStartGate" class="audio-start-gate" type="button" hidden><span>Tap to start with sound</span><small>Your browser requires a tap before audio can start.</small></button></div>
 </div>
 <section class="spectrum-keyboard-panel" aria-labelledby="spectrum-keyboard-title">
 <header><h2 id="spectrum-keyboard-title">ZX Spectrum keyboard</h2><p>Desktop: Shift = CAPS SHIFT · Alt = SYMBOL SHIFT · Alt+P = "</p></header>
@@ -179,6 +179,6 @@ RUN</textarea><button type="submit">Type Pasted Text</button></form>
       <span>Contact</span>
       <img src="./public/assets/contact-email.png" alt="Contact email address" width="388" height="60">
     </footer>
-    <script type="module" src="./public/app.js?v=20261005-media-errors"></script>
+    <script type="module" src="./public/app.js?v=20261005-audio-gate"></script>
   </body>
 </html>
