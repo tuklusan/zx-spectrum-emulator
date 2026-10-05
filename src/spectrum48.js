@@ -93,6 +93,7 @@ export class Spectrum48 {
     this.tapePlaybackEndCursor = 0;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
+    this.tapeWaitForRomLoader = false;
     this.inputPlayback = null;
     this.cpuExecuting = false;
     this.busTState = 0;
@@ -199,15 +200,22 @@ export class Spectrum48 {
     this.stopTapePlayback();
   }
 
-  startTapePlayback({ startIndex = this.tapeCursor, initialPauseMs = 0 } = {}) {
+  startTapePlayback({
+    startIndex = this.tapeCursor,
+    initialPauseMs = 0,
+    waitForRomLoader = false
+  } = {}) {
     const sequence = this.buildTapePulseSequence(startIndex, initialPauseMs);
     this.tapePulseDurations = sequence.durations;
     this.tapePulseLevels = sequence.levels;
     this.tapePulseIndex = 0;
     this.tapeEarLevel = Boolean(this.tapePulseLevels[0]);
     this.tapePlaying = this.tapePulseDurations.length > 0;
+    this.tapeWaitForRomLoader = this.tapePlaying && waitForRomLoader;
     this.tapePlaybackEndCursor = this.tapeBlocks.length;
-    this.tapeNextPulseTState = this.cpu.tStates + (this.tapePulseDurations[0] ?? 0);
+    this.tapeNextPulseTState = this.tapeWaitForRomLoader
+      ? 0
+      : this.cpu.tStates + (this.tapePulseDurations[0] ?? 0);
   }
 
   startTapePlaybackFromCursor() {
@@ -223,6 +231,7 @@ export class Spectrum48 {
     this.tapePlaybackEndCursor = this.tapeCursor;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
+    this.tapeWaitForRomLoader = false;
   }
 
   buildTapePulseSequence(startIndex, initialPauseMs) {
@@ -307,6 +316,12 @@ export class Spectrum48 {
   }
 
   readTapeEarBit() {
+    if (this.tapeWaitForRomLoader) {
+      const pc = this.cpu.PC & 0xffff;
+      if (pc < 0x0556 || pc > 0x05e2) return 0x40;
+      this.tapeWaitForRomLoader = false;
+      this.tapeNextPulseTState = this.cpu.tStates + (this.tapePulseDurations[0] ?? 0);
+    }
     this.advanceTapePlayback();
     if (!this.tapePlaying) return 0x40;
     return this.tapeEarLevel ? 0x40 : 0x00;
@@ -590,7 +605,8 @@ export class Spectrum48 {
         nextPulseTState: this.tapeNextPulseTState,
         playbackEndCursor: this.tapePlaybackEndCursor,
         earLevel: this.tapeEarLevel,
-        playing: this.tapePlaying
+        playing: this.tapePlaying,
+        waitForRomLoader: this.tapeWaitForRomLoader
       }
     };
   }
@@ -616,6 +632,7 @@ export class Spectrum48 {
     this.tapePlaybackEndCursor = state.tape?.playbackEndCursor ?? this.tapeCursor;
     this.tapeEarLevel = Boolean(state.tape?.earLevel);
     this.tapePlaying = Boolean(state.tape?.playing);
+    this.tapeWaitForRomLoader = Boolean(state.tape?.waitForRomLoader);
     this.inputPlayback = null;
   }
 
