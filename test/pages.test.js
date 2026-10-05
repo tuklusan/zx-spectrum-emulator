@@ -192,7 +192,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /activeChords\.clear\(\)/);
   assert.match(app, /softPointers\.clear\(\)/);
   assert.match(app, /latchedSoftModifiers\.clear\(\)/);
-  assert.match(app, /machine\?\.getPressedKeys\(\)/);
+  assert.match(app, /machine\?\.releaseAllKeys\(\)/);
   assert.match(app, /window\.addEventListener\("blur", clearInputState\)/);
   assert.match(app, /document\.addEventListener\("visibilitychange"/);
   assert.match(app, /function prepareAutoloadAudio/);

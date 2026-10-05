@@ -197,6 +197,29 @@ test("reports currently pressed Spectrum keys for diagnostics", () => {
   assert.deepEqual(machine.getPressedKeys(), ["P", "SYMBOL SHIFT"]);
 });
 
+test("keeps a key down until every input owner releases it", () => {
+  const machine = makeMachine();
+  machine.pressKey("A");
+  machine.pressKey("A");
+  machine.releaseKey("A");
+  assert.deepEqual(machine.getPressedKeys(), ["A"]);
+  machine.releaseKey("A");
+  assert.deepEqual(machine.getPressedKeys(), []);
+});
+
+test("restores keyboard ownership counts with machine state", () => {
+  const machine = makeMachine();
+  machine.pressKey("A");
+  machine.pressKey("A");
+  const state = machine.saveState();
+  machine.releaseAllKeys();
+  machine.restoreState(state);
+  machine.releaseKey("A");
+  assert.deepEqual(machine.getPressedKeys(), ["A"]);
+  machine.releaseKey("A");
+  assert.deepEqual(machine.getPressedKeys(), []);
+});
+
 test("CPU IN instructions read the keyboard matrix through port fe", () => {
   const machine = new Spectrum48({
     rom: makeRom({

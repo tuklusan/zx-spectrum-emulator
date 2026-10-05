@@ -275,7 +275,7 @@ export function applyZ80Snapshot(machine, snapshotOrBytes) {
   machine.beeperOn = false;
   machine.beeperEvents = [];
   machine.frame = 0;
-  machine.keyboardRows.fill(0x1f);
+  machine.releaseAllKeys();
   machine.clearTape();
   return snapshot;
 }

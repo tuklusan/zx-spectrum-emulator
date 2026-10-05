@@ -103,6 +103,7 @@ export class Spectrum48 {
     this.busAccessCount = 0;
     this.frame = 0;
     this.keyboardRows = new Uint8Array(8).fill(0x1f);
+    this.keyPressCounts = new Map();
     this.cpu = new Z80(this, {
       read: (port) => this.readPort(port),
       write: (port, value) => this.writePort(port, value)
@@ -369,22 +370,43 @@ export class Spectrum48 {
   }
 
   pressKey(key) {
-    this.setKeyState(key, true);
+    const normalized = normalizeKey(key);
+    const position = KEY_POSITIONS.get(normalized);
+    if (!position) throw new Error(`Unknown Spectrum key: ${key}`);
+    const owners = this.keyPressCounts.get(normalized) ?? 0;
+    this.keyPressCounts.set(normalized, owners + 1);
+    if (owners === 0) this.keyboardRows[position.row] &= ~position.mask;
   }
 
   releaseKey(key) {
-    this.setKeyState(key, false);
+    const normalized = normalizeKey(key);
+    const position = KEY_POSITIONS.get(normalized);
+    if (!position) throw new Error(`Unknown Spectrum key: ${key}`);
+    const owners = this.keyPressCounts.get(normalized) ?? 0;
+    if (owners <= 1) {
+      this.keyPressCounts.delete(normalized);
+      this.keyboardRows[position.row] |= position.mask;
+      return;
+    }
+    this.keyPressCounts.set(normalized, owners - 1);
   }
 
   setKeyState(key, pressed) {
-    const position = KEY_POSITIONS.get(normalizeKey(key));
+    const normalized = normalizeKey(key);
+    const position = KEY_POSITIONS.get(normalized);
     if (!position) throw new Error(`Unknown Spectrum key: ${key}`);
-
     if (pressed) {
+      this.keyPressCounts.set(normalized, 1);
       this.keyboardRows[position.row] &= ~position.mask;
     } else {
+      this.keyPressCounts.delete(normalized);
       this.keyboardRows[position.row] |= position.mask;
     }
+  }
+
+  releaseAllKeys() {
+    this.keyPressCounts.clear();
+    this.keyboardRows.fill(0x1f);
   }
 
   readKeyboardRows(port) {
@@ -627,6 +649,7 @@ export class Spectrum48 {
       beeperEvents: this.beeperEvents.map((event) => ({ ...event })),
       frame: this.frame,
       keyboardRows: Uint8Array.from(this.keyboardRows),
+      keyPressCounts: Array.from(this.keyPressCounts.entries()),
       tape: {
         cursor: this.tapeCursor,
         playbackBlockIndex: this.tapePlaybackBlockIndex,
@@ -656,6 +679,10 @@ export class Spectrum48 {
     this.beeperEvents = (state.beeperEvents ?? []).map((event) => ({ ...event }));
     this.frame = state.frame ?? 0;
     this.keyboardRows.set(state.keyboardRows ?? new Uint8Array(8).fill(0x1f));
+    this.keyPressCounts = new Map(
+      (state.keyPressCounts ?? this.getPressedKeys().map((key) => [key, 1]))
+        .filter(([key, owners]) => KEY_POSITIONS.has(key) && Number.isInteger(owners) && owners > 0)
+    );
     this.tapeCursor = state.tape?.cursor ?? 0;
     this.tapePlaybackBlockIndex = state.tape?.playbackBlockIndex ?? this.tapeCursor;
     this.tapePulseIndex = state.tape?.pulseIndex ?? 0;
@@ -688,5 +715,6 @@ export class Spectrum48 {
     this.cpu.reset();
     this.frame = 0;
     this.beeperEvents = [];
+    this.releaseAllKeys();
   }
 }

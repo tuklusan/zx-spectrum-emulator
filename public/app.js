@@ -921,7 +921,7 @@ const softPointers = new Map();
 const latchedSoftModifiers = new Set();
 
 function clearInputState() {
-  for (const key of machine?.getPressedKeys() ?? []) machine.releaseKey(key);
+  machine?.releaseAllKeys();
   activeChords.clear();
   physicalShiftDown = false;
   softPointers.clear();
