@@ -1,5 +1,7 @@
 > This repository is a fork of Chris Wilson's original `zx-spectrum-emulator` project. I have mostly left Chris's excellent machine lab alone and fiddled with the Spectrum bits: the GitHub Pages site opens straight into the Spectrum, a tape can be loaded from a URL with `?tape=...&autoload=1`, turbo TZX blocks play using their own timings, tape loading runs much faster, and sound comes on by default after your first click or key press. I also added a few small web-page and test tweaks so the whole thing behaves itself on GitHub Pages. Nothing grand; just enough poking to make [ZX Carrom](https://github.com/tuklusan/ZX-Carrom) load without waiting for the heat death of the universe.
 
+## ▶ [Launch the ZX Spectrum emulator in your browser](https://tuklusan.github.io/zx-spectrum-emulator/)
+
 # Z80 Machine Lab
 
 A faithful Zilog Z80 emulator with four browser-hosted machine layers:
