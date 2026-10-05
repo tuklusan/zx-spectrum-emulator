@@ -163,27 +163,8 @@ export class Spectrum48 {
   }
 
   setTapeBlocks(blocks, { cursor = 0 } = {}) {
-    this.tapeBlocks = blocks.map((block, index) => ({
-      index: block.index ?? index,
-      source: block.source ?? "TAP",
-      type: block.type ?? "tap",
-      flag: Number.isInteger(block.flag) ? block.flag & 0xff : null,
-      payload: Uint8Array.from(block.payload ?? []),
-      checksum: Number.isInteger(block.checksum) ? block.checksum & 0xff : null,
-      pauseMs: block.pauseMs ?? 0,
-      checksumValid: block.checksumValid !== false,
-      header: block.header ? { ...block.header } : null,
-      timing: block.timing ? { ...block.timing } : null,
-      generalized: block.generalized ? {
-        pilotSymbols: block.generalized.pilotSymbols.map((symbol) => ({ flags: symbol.flags, pulses: [...symbol.pulses] })),
-        pilotStream: block.generalized.pilotStream.map((entry) => ({ ...entry })),
-        dataSymbols: block.generalized.dataSymbols.map((symbol) => ({ flags: symbol.flags, pulses: [...symbol.pulses] })),
-        dataStream: Uint8Array.from(block.generalized.dataStream),
-        dataSymbolCount: block.generalized.dataSymbolCount,
-        dataBitsPerSymbol: block.generalized.dataBitsPerSymbol
-      } : null,
-      fastLoadable: block.fastLoadable !== false
-    }));
+    if (!Array.isArray(blocks)) throw new TypeError("Tape blocks must be an array");
+    this.tapeBlocks = blocks;
     this.tapeCursor = Math.max(0, Math.min(cursor, this.tapeBlocks.length));
     this.stopTapePlayback();
   }

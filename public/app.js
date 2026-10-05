@@ -94,7 +94,6 @@ let physicalShiftDown = false;
 const activeChords = new Map();
 let lastModernKey = "-";
 let lastMappedKeys = [];
-let currentTapBlocks = [];
 const executionHistory = new MachineHistory({ limit: 6000, byteLimit: 64 * 1024 * 1024 });
 let rzxPlayback;
 let rzxPlaying = false;
@@ -133,8 +132,9 @@ async function loadRom() {
 }
 
 function resetMachine() {
+  const insertedTape = machine?.tapeBlocks ?? [];
   machine = new Spectrum48({ rom });
-  if (currentTapBlocks.length > 0) machine.setTapeBlocks(currentTapBlocks, { cursor: 0 });
+  if (insertedTape.length > 0) machine.setTapeBlocks(insertedTape, { cursor: 0 });
   running = true;
   frameAccumulatorMs = 0;
   runPauseButton.textContent = "Pause";
@@ -148,8 +148,9 @@ function resetMachine() {
 
 function mountRom(bytes, message) {
   const nextRom = Uint8Array.from(bytes);
+  const insertedTape = machine?.tapeBlocks ?? [];
   const nextMachine = new Spectrum48({ rom: nextRom });
-  if (currentTapBlocks.length > 0) nextMachine.setTapeBlocks(currentTapBlocks);
+  if (insertedTape.length > 0) nextMachine.setTapeBlocks(insertedTape, { cursor: 0 });
 
   rom = nextRom;
   machine = nextMachine;
@@ -378,7 +379,6 @@ function setLoadedMediaLabel(label) {
 
 function mountTapeBytes(input, label = "tape") {
   const blocks = parseTapeFile(input);
-  currentTapBlocks = blocks;
   machine.setTapeBlocks(blocks);
   setLoadedMediaLabel(label);
   statusOutput.value = "Mounted " + blocks.length + " tape block" + (blocks.length === 1 ? "" : "s") + " from " + label;
@@ -524,7 +524,6 @@ async function loadTapeQueryParameters() {
 }
 
 function clearMountedTape() {
-  currentTapBlocks = [];
   machine.clearTape();
 }
 

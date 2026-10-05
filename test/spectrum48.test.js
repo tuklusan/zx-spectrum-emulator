@@ -448,3 +448,18 @@ test("restoring state rebuilds the streamed tape block exactly", () => {
   assert.equal(machine.tapeNextPulseTState, saved.tape.nextPulseTState);
   assert.equal(machine.tapeEarLevel, saved.tape.earLevel);
 });
+
+
+test("mounted tape blocks stay as one shared parsed representation", () => {
+  const machine = new Spectrum48({ rom: new Uint8Array(0x4000) });
+  const blocks = [{
+    flag: 0xff,
+    payload: new Uint8Array([1, 2, 3]),
+    checksum: 0xff,
+    checksumValid: true,
+    pauseMs: 0
+  }];
+  machine.setTapeBlocks(blocks);
+  assert.equal(machine.tapeBlocks, blocks);
+  assert.equal(machine.tapeBlocks[0].payload, blocks[0].payload);
+});
