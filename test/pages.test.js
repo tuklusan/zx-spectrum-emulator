@@ -42,7 +42,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-zxinfo-mirror"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-media-errors"/);
   assert.match(spectrum, /id="audioToggle"[^>]*aria-pressed="true"[^>]*>Sound On<\/button>/);
   assert.match(spectrum, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/index\.html">Machines</);
@@ -92,13 +92,17 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   const keyboardIndex = index.indexOf('id="spectrumKeyboard"');
   const mediaFileIndex = index.indexOf('id="mediaFile"');
   const mediaUrlIndex = index.indexOf('id="mediaUrl"');
+  const mediaUrlLoadIndex = index.indexOf('id="mediaUrlLoad"');
+  const mediaStatusIndex = index.indexOf('id="mediaStatus"');
   const advancedIndex = index.indexOf('id="advancedTools"');
 
   assert.ok(screenIndex >= 0);
   assert.ok(keyboardIndex > screenIndex);
   assert.ok(mediaFileIndex > keyboardIndex);
   assert.ok(mediaUrlIndex > mediaFileIndex);
-  assert.ok(advancedIndex > mediaUrlIndex);
+  assert.ok(mediaUrlLoadIndex > mediaUrlIndex);
+  assert.ok(mediaStatusIndex > mediaUrlLoadIndex);
+  assert.ok(advancedIndex > mediaStatusIndex);
   assert.equal((index.match(/data-spectrum-key="/g) ?? []).length, 40);
   assert.match(index, /data-spectrum-key="CAPS SHIFT"/);
   assert.match(index, /data-spectrum-key="SYMBOL SHIFT"/);
@@ -124,6 +128,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(index, /id="assemblerSearch"/);
   assert.match(index, /id="mediaFile"/);
   assert.match(index, /id="mediaUrlLoad"/);
+  assert.match(index, /id="mediaStatus" class="media-status" role="alert" aria-live="assertive" hidden/);
   assert.match(index, /id="mediaAutoloadTape"/);
   assert.doesNotMatch(index, /id="tapFile"/);
   assert.doesNotMatch(index, /id="snapshotFile"/);
@@ -141,6 +146,9 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /loadSpectrumMediaBytes/);
   assert.match(app, /loadSpectrumMediaFromUrl/);
   assert.match(app, /mediaAutoloadTapeInput\.checked/);
+  assert.match(app, /function showMediaError/);
+  assert.match(app, /load failed\|failed to fetch/);
+  assert.match(app, /remote server blocked browser access \(CORS\)/);
 });
 
 test("machine selector exposes Spectrum, CP/M, TRS-80, and TI-85 routes", async () => {

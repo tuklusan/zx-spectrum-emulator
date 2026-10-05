@@ -58,6 +58,7 @@ const basicExportButton = document.querySelector("#basicExport");
 const mediaFileInput = document.querySelector("#mediaFile");
 const mediaUrlInput = document.querySelector("#mediaUrl");
 const mediaUrlLoadButton = document.querySelector("#mediaUrlLoad");
+const mediaStatusOutput = document.querySelector("#mediaStatus");
 const mediaAutoloadTapeInput = document.querySelector("#mediaAutoloadTape");
 const tapList = document.querySelector("#tapList");
 const tapLoadButton = document.querySelector("#tapLoad");
@@ -460,6 +461,25 @@ async function loadSpectrumMediaFromUrl(rawUrl, { autoloadTape = false } = {}) {
   if (!response.ok) throw new Error("Media fetch failed: HTTP " + response.status);
   await loadSpectrumMediaBytes(await response.arrayBuffer(), response.url || resolvedUrl, { autoloadTape });
   return resolvedUrl;
+}
+
+function clearMediaError() {
+  mediaStatusOutput.textContent = "";
+  mediaStatusOutput.hidden = true;
+}
+
+function mediaErrorMessage(error) {
+  const message = String(error?.message ?? error ?? "Media load failed");
+  if (/^(load failed|failed to fetch|network request failed|networkerror when attempting to fetch resource\.?|the internet connection appears to be offline\.?)/i.test(message)
+      || /fetch failed/i.test(message)) {
+    return "Could not load this URL. The remote server blocked browser access (CORS), or the network request failed. Download the file and use From device instead.";
+  }
+  return message;
+}
+
+function showMediaError(error) {
+  mediaStatusOutput.textContent = mediaErrorMessage(error);
+  mediaStatusOutput.hidden = false;
 }
 
 function downloadBytes(bytes, filename, type = "application/octet-stream") {
@@ -963,12 +983,13 @@ mediaFileInput.addEventListener("change", async () => {
   const file = mediaFileInput.files?.[0];
   if (!file) return;
 
+  clearMediaError();
   try {
     await loadSpectrumMediaBytes(await file.arrayBuffer(), file.name, {
       autoloadTape: mediaAutoloadTapeInput.checked
     });
   } catch (error) {
-    statusOutput.value = error.message;
+    showMediaError(error);
   } finally {
     mediaFileInput.value = "";
   }
@@ -976,8 +997,9 @@ mediaFileInput.addEventListener("change", async () => {
 
 mediaUrlLoadButton.addEventListener("click", async () => {
   const rawUrl = mediaUrlInput.value.trim();
+  clearMediaError();
   if (!rawUrl) {
-    statusOutput.value = "Media URL is empty";
+    showMediaError(new Error("Media URL is empty"));
     mediaUrlInput.focus();
     return;
   }
@@ -986,9 +1008,7 @@ mediaUrlLoadButton.addEventListener("click", async () => {
   try {
     await loadSpectrumMediaFromUrl(rawUrl, { autoloadTape: mediaAutoloadTapeInput.checked });
   } catch (error) {
-    statusOutput.value = error.message + (/fetch failed|Failed to fetch/i.test(error.message)
-      ? " (the remote server may block browser access)"
-      : "");
+    showMediaError(error);
   } finally {
     mediaUrlLoadButton.disabled = false;
   }
