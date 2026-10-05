@@ -1,16 +1,4 @@
 import { BeeperAudio } from "./audio.js";
-import { ASSEMBLER_REFERENCE } from "./assembler-reference.js";
-import { exportBasicProgram, loadBasicProgram, renumberBasicProgram } from "./basic.js";
-import {
-  disassembleWindow,
-  hexByte,
-  hexWord,
-  readBasicStatus,
-  readMemoryRows,
-  readSystemVariables
-} from "./debugger.js";
-import { MachineHistory } from "./history.js";
-import { initializeDebugWindows } from "./debug-windows.js";
 import { Spectrum48 } from "../src/spectrum48.js";
 import {
   basicTextToSpectrumKeyTaps,
@@ -95,7 +83,18 @@ let physicalShiftDown = false;
 const activeChords = new Map();
 let lastModernKey = "-";
 let lastMappedKeys = [];
-const executionHistory = new MachineHistory({ limit: 6000, byteLimit: 64 * 1024 * 1024 });
+let executionHistory = null;
+let advancedToolsPromise = null;
+let assemblerReferenceEntries = [];
+let exportBasicProgram;
+let loadBasicProgram;
+let renumberBasicProgram;
+let disassembleWindow;
+let hexByte;
+let hexWord;
+let readBasicStatus;
+let readMemoryRows;
+let readSystemVariables;
 let rzxPlayback;
 let rzxPlaying = false;
 let sourceRows = [];
@@ -105,7 +104,37 @@ let frameAccumulatorMs = 0;
 let mediaRequestGeneration = 0;
 let mediaRequestController;
 
-initializeDebugWindows({ onStatus: (message) => { statusOutput.value = message; } });
+async function ensureAdvancedTools() {
+  if (advancedToolsPromise) return advancedToolsPromise;
+
+  advancedToolsPromise = Promise.all([
+    import("./assembler-reference.js"),
+    import("./basic.js"),
+    import("./debugger.js"),
+    import("./history.js"),
+    import("./debug-windows.js")
+  ]).then(([assemblerModule, basicModule, debuggerModule, historyModule, windowsModule]) => {
+    assemblerReferenceEntries = assemblerModule.ASSEMBLER_REFERENCE;
+    exportBasicProgram = basicModule.exportBasicProgram;
+    loadBasicProgram = basicModule.loadBasicProgram;
+    renumberBasicProgram = basicModule.renumberBasicProgram;
+    disassembleWindow = debuggerModule.disassembleWindow;
+    hexByte = debuggerModule.hexByte;
+    hexWord = debuggerModule.hexWord;
+    readBasicStatus = debuggerModule.readBasicStatus;
+    readMemoryRows = debuggerModule.readMemoryRows;
+    readSystemVariables = debuggerModule.readSystemVariables;
+    executionHistory = new historyModule.MachineHistory({ limit: 6000, byteLimit: 64 * 1024 * 1024 });
+    windowsModule.initializeDebugWindows({ onStatus: (message) => { statusOutput.value = message; } });
+    updateHistoryControls();
+    return true;
+  }).catch((error) => {
+    advancedToolsPromise = null;
+    throw error;
+  });
+
+  return advancedToolsPromise;
+}
 
 function formatWord(value) {
   return value.toString(16).padStart(4, "0").toUpperCase();
@@ -166,19 +195,21 @@ function mountRom(bytes, message) {
 }
 
 function updateHistoryControls() {
-  stepBackButton.disabled = executionHistory.size === 0;
-  rewindTimelineInput.disabled = executionHistory.size === 0;
-  rewindTimelineInput.max = String(executionHistory.size);
-  if (document.activeElement !== rewindTimelineInput) rewindTimelineInput.value = String(executionHistory.size);
-  rewindDepthOutput.value = `${executionHistory.size} checkpoint${executionHistory.size === 1 ? "" : "s"}`;
+  const size = executionHistory?.size ?? 0;
+  stepBackButton.disabled = size === 0;
+  rewindTimelineInput.disabled = size === 0;
+  rewindTimelineInput.max = String(size);
+  if (document.activeElement !== rewindTimelineInput) rewindTimelineInput.value = String(size);
+  rewindDepthOutput.value = `${size} checkpoint${size === 1 ? "" : "s"}`;
 }
 
 function clearExecutionHistory() {
-  executionHistory.clear();
+  executionHistory?.clear();
   updateHistoryControls();
 }
 
 function captureExecutionState(label) {
+  if (!executionHistory) return;
   executionHistory.capture(machine, label, rzxPlayback
     ? { rzxEventIndex: rzxPlayback.eventIndex, rzxFrameIndex: rzxPlayback.frameIndex }
     : null);
@@ -767,6 +798,7 @@ function draw(timestamp) {
   requestAnimationFrame(draw);
 }
 function updateDebugger() {
+  if (!disassembleWindow) return;
   const state = machine.cpu.getState();
   const registers = state.registers;
   renderKeyValueGrid(registerGrid, [
@@ -880,9 +912,10 @@ function highlightSourceLine(pc) {
 }
 
 function renderAssemblerReference(query = "") {
+  if (!assemblerReferenceEntries.length) return;
   const normalizedQuery = query.trim().toLowerCase();
   const selectedCategory = assemblerCategoryInput.value;
-  const entries = ASSEMBLER_REFERENCE.filter((entry) =>
+  const entries = assemblerReferenceEntries.filter((entry) =>
     (!selectedCategory || entry.category === selectedCategory)
     && (!normalizedQuery || `${entry.category} ${entry.syntax} ${entry.description}`.toLowerCase().includes(normalizedQuery))
   );
@@ -1043,7 +1076,8 @@ runPauseButton.addEventListener("click", () => {
   statusOutput.value = running ? "Running" : "Paused";
 });
 
-stepFrameButton.addEventListener("click", () => {
+stepFrameButton.addEventListener("click", async () => {
+  await ensureAdvancedTools();
   running = false;
   rzxPlaying = false;
   rzxPlayPauseButton.textContent = "Play RZX";
@@ -1056,7 +1090,8 @@ stepFrameButton.addEventListener("click", () => {
   statusOutput.value = "Stepped one frame";
 });
 
-stepInstructionButton.addEventListener("click", () => {
+stepInstructionButton.addEventListener("click", async () => {
+  await ensureAdvancedTools();
   running = false;
   rzxPlaying = false;
   rzxPlayPauseButton.textContent = "Play RZX";
@@ -1075,6 +1110,7 @@ function reverseExecutionOnce() {
   runPauseButton.textContent = "Run";
   runPauseButton.setAttribute("aria-label", "Run");
   rzxPlayPauseButton.textContent = "Play RZX";
+  if (!executionHistory) return null;
   const entry = executionHistory.stepBack(machine);
   if (!entry) return null;
   if (entry.metadata && rzxPlayback) {
@@ -1091,11 +1127,13 @@ function reverseExecutionOnce() {
   return entry;
 }
 
-stepBackButton.addEventListener("click", () => {
+stepBackButton.addEventListener("click", async () => {
+  await ensureAdvancedTools();
   reverseExecutionOnce();
 });
 
-rewindTimelineInput.addEventListener("change", () => {
+rewindTimelineInput.addEventListener("change", async () => {
+  await ensureAdvancedTools();
   const target = Math.max(0, Math.min(executionHistory.size, Number(rewindTimelineInput.value)));
   let reversed = 0;
   while (executionHistory.size > target && reverseExecutionOnce()) reversed += 1;
@@ -1170,20 +1208,37 @@ showRasterOverlayInput.addEventListener("change", () => {
   else rasterContext.clearRect(0, 0, rasterOverlay.width, rasterOverlay.height);
 });
 
-advancedToolsDetails?.addEventListener("toggle", () => {
+advancedToolsDetails?.addEventListener("toggle", async () => {
   if (!advancedToolsDetails.open) {
     rasterContext.clearRect(0, 0, rasterOverlay.width, rasterOverlay.height);
     return;
   }
-  if (!assemblerReferenceInitialized) {
-    renderAssemblerReference();
-    assemblerReferenceInitialized = true;
+  try {
+    await ensureAdvancedTools();
+    if (!assemblerReferenceInitialized) {
+      for (const category of [...new Set(assemblerReferenceEntries.map((entry) => entry.category))].sort()) {
+        const option = document.createElement("option");
+        option.value = category;
+        option.textContent = category;
+        assemblerCategoryInput.append(option);
+      }
+      renderAssemblerReference();
+      assemblerReferenceInitialized = true;
+    }
+    refreshDebugDisplay();
+  } catch (error) {
+    statusOutput.value = error.message;
   }
-  refreshDebugDisplay();
 });
 
-debugWorkbenchDetails?.addEventListener("toggle", () => {
-  if (debugWorkbenchDetails.open && advancedToolsDetails?.open && machine) updateDebugger();
+debugWorkbenchDetails?.addEventListener("toggle", async () => {
+  if (!debugWorkbenchDetails.open || !advancedToolsDetails?.open || !machine) return;
+  try {
+    await ensureAdvancedTools();
+    updateDebugger();
+  } catch (error) {
+    statusOutput.value = error.message;
+  }
 });
 
 mediaFileInput.addEventListener("click", () => {
@@ -1258,6 +1313,7 @@ basicFileInput.addEventListener("change", async () => {
   if (!file) return;
 
   try {
+    await ensureAdvancedTools();
     let text = await file.text();
     try {
       loadBasicProgram(machine, text);
@@ -1276,8 +1332,9 @@ basicFileInput.addEventListener("change", async () => {
   }
 });
 
-basicExportButton.addEventListener("click", () => {
+basicExportButton.addEventListener("click", async () => {
   try {
+    await ensureAdvancedTools();
     const text = `${exportBasicProgram(machine)}\n`;
     downloadBytes(text, "zx-spectrum-program.bas", "text/plain;charset=utf-8");
     statusOutput.value = "Exported current BASIC program";
@@ -1299,21 +1356,20 @@ sourceFileInput.addEventListener("change", async () => {
   }
 });
 
-assemblerSearchInput.addEventListener("input", () => {
+assemblerSearchInput.addEventListener("input", async () => {
+  await ensureAdvancedTools();
   renderAssemblerReference(assemblerSearchInput.value);
 });
 
-for (const category of [...new Set(ASSEMBLER_REFERENCE.map((entry) => entry.category))].sort()) {
-  const option = document.createElement("option");
-  option.value = category;
-  option.textContent = category;
-  assemblerCategoryInput.append(option);
-}
-assemblerCategoryInput.addEventListener("change", () => renderAssemblerReference(assemblerSearchInput.value));
+assemblerCategoryInput.addEventListener("change", async () => {
+  await ensureAdvancedTools();
+  renderAssemblerReference(assemblerSearchInput.value);
+});
 
-pasteForm.addEventListener("submit", (event) => {
+pasteForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
+    await ensureAdvancedTools();
     typeModernText(pasteTextInput.value, { reset: true });
   } catch (error) {
     statusOutput.value = error.message;

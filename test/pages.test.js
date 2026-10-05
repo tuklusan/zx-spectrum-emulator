@@ -164,6 +164,16 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /pointerdown/);
   assert.match(app, /latchedSoftModifiers/);
   assert.match(app, /advancedToolsDetails\?\.open/);
+  assert.doesNotMatch(app, /^import .*assembler-reference\.js/m);
+  assert.doesNotMatch(app, /^import .*basic\.js/m);
+  assert.doesNotMatch(app, /^import .*debugger\.js/m);
+  assert.doesNotMatch(app, /^import .*history\.js/m);
+  assert.doesNotMatch(app, /^import .*debug-windows\.js/m);
+  assert.match(app, /import\("\.\/assembler-reference\.js"\)/);
+  assert.match(app, /import\("\.\/basic\.js"\)/);
+  assert.match(app, /import\("\.\/debugger\.js"\)/);
+  assert.match(app, /import\("\.\/history\.js"\)/);
+  assert.match(app, /import\("\.\/debug-windows\.js"\)/);
   assert.match(app, /if \(advancedActive\) captureExecutionState\("Frame"\)/);
   assert.match(app, /if \(debugWorkbenchDetails\?\.open\) updateDebugger\(\)/);
   assert.match(app, /executionHistory\.stepBack\(machine\)/);
@@ -183,6 +193,8 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.doesNotMatch(app, /loadSpectrumMediaFromUrl/);
   assert.doesNotMatch(app, /mediaAutoloadTapeInput/);
   assert.doesNotMatch(app, /tapEntries/);
+  const tapeParser = await readFile("public/tape.js", "utf8");
+  assert.doesNotMatch(tapeParser, /from "\.\/basic\.js"/);
   assert.doesNotMatch(app, /loadTapEntry/);
   assert.match(app, /function resetMachine\(\)[\s\S]*?running = true/);
   assert.match(app, /const insertedTape = machine\?\.tapeBlocks \?\? \[\]/);

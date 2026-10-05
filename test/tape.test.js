@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { tokenizeBasicLine } from "../public/basic.js";
-import { loadTapEntry, parseTapeFile, parseTap, parseTzx, tapEntries } from "../public/tape.js";
+import { parseTapeFile, parseTap, parseTzx } from "../public/tape.js";
+import { loadTapEntry, tapEntries } from "../public/tape-tools.js";
 import { Spectrum48 } from "../src/spectrum48.js";
 
 function checksum(bytes) {
