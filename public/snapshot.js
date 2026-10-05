@@ -78,8 +78,10 @@ function decodeCompressed(bytes, offset, expectedLength, { stopAtV1Marker = fals
     source += 1;
   }
 
-  if (target < expectedLength && !stopAtV1Marker) {
-    throw new Error("Z80 snapshot ended before the RAM page was complete");
+  if (target < expectedLength) {
+    throw new Error(stopAtV1Marker
+      ? "Z80 v1 snapshot compressed data ended before 48K RAM was complete"
+      : "Z80 snapshot ended before the RAM page was complete");
   }
   return output;
 }
@@ -134,12 +136,22 @@ export function parseZ80Snapshot(input) {
 
   const headerPc = readWord(bytes, 6);
   const isV1 = headerPc !== 0;
-  const pc = isV1 ? headerPc : readWord(bytes, 32);
+  let pc = headerPc;
+  let extendedRamOffset = 0;
+  if (!isV1) {
+    if (bytes.length < 34) throw new Error("Z80 extended snapshot header is truncated");
+    const extendedHeaderLength = readWord(bytes, 30);
+    if (extendedHeaderLength < 3 || 32 + extendedHeaderLength > bytes.length) {
+      throw new Error("Z80 extended snapshot header length is invalid");
+    }
+    pc = readWord(bytes, 32);
+    extendedRamOffset = 32 + extendedHeaderLength;
+  }
   const registers = parseHeader(bytes, pc);
   const borderColor = (bytes[12] >> 1) & 0x07;
   const ram = isV1
     ? parseV1(bytes, headerPc)
-    : parseExtendedRam(bytes, 32 + readWord(bytes, 30));
+    : parseExtendedRam(bytes, extendedRamOffset);
 
   return {
     format: isV1 ? "Z80 v1" : "Z80 extended",

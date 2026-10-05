@@ -192,3 +192,23 @@ test("loads 48K page blocks from extended Z80 snapshots", () => {
   assert.equal(machine.read8(0x8000), 0x80);
   assert.equal(machine.read8(0xc000), 0xc0);
 });
+
+
+test("rejects truncated compressed Z80 v1 RAM instead of zero-filling it", () => {
+  const bytes = new Uint8Array(30 + 8);
+  writeHeader(bytes, { pc: 0x8123, compressed: true });
+  bytes.set([0xed, 0xed, 4, 0xaa, 0x00, 0xed, 0xed, 0x00], 30);
+  assert.throws(() => parseZ80Snapshot(bytes), /ended before 48K RAM was complete/);
+});
+
+test("rejects truncated and invalid extended Z80 headers", () => {
+  const truncated = new Uint8Array(31);
+  writeHeader(truncated, { pc: 0 });
+  truncated[30] = 23;
+  assert.throws(() => parseZ80Snapshot(truncated), /extended snapshot header is truncated/);
+
+  const invalidLength = new Uint8Array(40);
+  writeHeader(invalidLength, { pc: 0 });
+  writeWord(invalidLength, 30, 54);
+  assert.throws(() => parseZ80Snapshot(invalidLength), /extended snapshot header length is invalid/);
+});
