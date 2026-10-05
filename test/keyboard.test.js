@@ -35,10 +35,30 @@ test("maps ordinary letters and digits to Spectrum keys", () => {
   assert.deepEqual(spectrumKeysForModernKey(event("7")), ["7"]);
 });
 
-test("maps modern editing keys to Spectrum chords", () => {
+test("maps modern editing and Spectrum modifier keys to Spectrum chords", () => {
   assert.deepEqual(spectrumKeysForModernKey(event("Enter")), ["ENTER"]);
   assert.deepEqual(spectrumKeysForModernKey(event(" ")), ["SPACE"]);
   assert.deepEqual(spectrumKeysForModernKey(event("Backspace")), ["CAPS SHIFT", "0"]);
+  assert.deepEqual(spectrumKeysForModernKey(event("Alt")), ["SYMBOL SHIFT"]);
+  assert.deepEqual(spectrumKeysForModernKey(event("Control")), ["SYMBOL SHIFT"]);
+  assert.deepEqual(spectrumKeysForModernKey(event("ArrowLeft")), ["CAPS SHIFT", "5"]);
+  assert.deepEqual(spectrumKeysForModernKey(event("ArrowDown")), ["CAPS SHIFT", "6"]);
+  assert.deepEqual(spectrumKeysForModernKey(event("ArrowUp")), ["CAPS SHIFT", "7"]);
+  assert.deepEqual(spectrumKeysForModernKey(event("ArrowRight")), ["CAPS SHIFT", "8"]);
+});
+
+test("keeps Alt-letter chords usable when the browser changes event.key", () => {
+  assert.deepEqual(
+    spectrumKeysForModernKey({ key: "π", code: "KeyP", altKey: true }),
+    ["P"]
+  );
+});
+
+test("does not duplicate Caps Shift when physical Shift is already held", () => {
+  assert.deepEqual(
+    spectrumKeysForModernKey({ key: "P", code: "KeyP", shiftKey: true }),
+    ["P"]
+  );
 });
 
 test("maps common modern punctuation to Symbol Shift chords", () => {

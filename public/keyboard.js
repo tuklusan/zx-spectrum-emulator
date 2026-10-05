@@ -3,7 +3,12 @@ const DIRECT_KEYS = new Map([
   [" ", ["SPACE"]],
   ["Backspace", ["CAPS SHIFT", "0"]],
   ["Shift", ["CAPS SHIFT"]],
-  ["Alt", ["SYMBOL SHIFT"]]
+  ["Alt", ["SYMBOL SHIFT"]],
+  ["Control", ["SYMBOL SHIFT"]],
+  ["ArrowLeft", ["CAPS SHIFT", "5"]],
+  ["ArrowDown", ["CAPS SHIFT", "6"]],
+  ["ArrowUp", ["CAPS SHIFT", "7"]],
+  ["ArrowRight", ["CAPS SHIFT", "8"]]
 ]);
 
 const SYMBOL_KEYS = new Map([
@@ -66,8 +71,13 @@ export function spectrumKeysForModernKey(event) {
   const symbol = SYMBOL_KEYS.get(event.key);
   if (symbol) return symbol;
 
+  if ((event.altKey || event.ctrlKey) && /^Key[A-Z]$/.test(event.code ?? "")) {
+    return [event.code.slice(3)];
+  }
+
   if (isLetter(event.key)) {
     const letter = event.key.toUpperCase();
+    if (event.shiftKey && /^Key[A-Z]$/.test(event.code ?? "")) return [letter];
     return event.key === letter ? ["CAPS SHIFT", letter] : [letter];
   }
 

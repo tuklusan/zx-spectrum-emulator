@@ -41,8 +41,8 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /href="\.\/ti85\.html"/);
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
-  assert.match(spectrum, /href="\.\/public\/styles\.css"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261004-sound-fast-tape"/);
+  assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-play-first"/);
   assert.match(spectrum, /id="audioToggle"[^>]*aria-pressed="true"[^>]*>Sound On<\/button>/);
   assert.match(spectrum, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/index\.html">Machines</);
@@ -84,25 +84,36 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(devServer, /"\/ti85\.html"/);
 });
 
-test("viewer groups secondary tools into tabs and keeps debugger collapsible", async () => {
+test("Spectrum viewer is play-first and keeps advanced tools dormant by default", async () => {
   const index = await readFile("public/spectrum.html", "utf8");
   const app = await readFile("public/app.js", "utf8");
 
-  assert.match(index, /role="tablist"/);
+  const screenIndex = index.indexOf('id="screen"');
+  const keyboardIndex = index.indexOf('id="spectrumKeyboard"');
+  const tapeIndex = index.indexOf('id="tapFile"');
+  const snapshotIndex = index.indexOf('id="snapshotFile"');
+  const advancedIndex = index.indexOf('id="advancedTools"');
+
+  assert.ok(screenIndex >= 0);
+  assert.ok(keyboardIndex > screenIndex);
+  assert.ok(tapeIndex > keyboardIndex);
+  assert.ok(snapshotIndex > keyboardIndex);
+  assert.ok(advancedIndex > snapshotIndex);
+  assert.equal((index.match(/data-spectrum-key="/g) ?? []).length, 40);
+  assert.match(index, /data-spectrum-key="CAPS SHIFT"/);
+  assert.match(index, /data-spectrum-key="SYMBOL SHIFT"/);
+  assert.match(index, /<details id="advancedTools" class="advanced-tools">/);
+  assert.doesNotMatch(index, /<details id="advancedTools" class="advanced-tools" open/);
+  assert.match(index, /<details id="debugWorkbench" class="debug-drawer">/);
+
   assert.match(index, /data-tool-tab="basic"/);
-  assert.match(index, /data-tool-tab="tape"/);
   assert.match(index, /data-tool-tab="snapshots"/);
   assert.match(index, /data-tool-tab="debug"/);
-  assert.match(index, /id="basicPanel"/);
-  assert.match(index, /id="tapePanel"/);
-  assert.match(index, /id="snapshotsPanel"/);
-  assert.match(index, /id="debugPanel"/);
   assert.match(index, /id="rasterLine"/);
   assert.match(index, /id="rasterColumn"/);
   assert.match(index, /id="rasterTState"/);
   assert.match(index, /id="immediateScreen"/);
   assert.match(index, /id="rasterOverlay"/);
-  assert.match(index, /<details class="debug-drawer"/);
   assert.match(index, /id="romFile"/);
   assert.match(index, /id="stepBack"/);
   assert.match(index, /id="rewindTimeline"/);
@@ -111,17 +122,16 @@ test("viewer groups secondary tools into tabs and keeps debugger collapsible", a
   assert.match(index, /id="sourceFile"/);
   assert.match(index, /id="sourceListing"/);
   assert.match(index, /id="assemblerSearch"/);
-  assert.match(index, /class="debug-card source-card resizable-window" data-window-id="source"/);
-  assert.match(index, /class="debug-card reference-card resizable-window" data-window-id="assembler-reference"/);
-  assert.match(app, /drawSpectrumScreen/);
-  assert.match(app, /drawRasterOverlay/);
-  assert.match(app, /machine\.getRasterPosition\(\)/);
-  assert.match(app, /romFileInput\.addEventListener\("change"/);
-  assert.match(app, /mountRom\(new Uint8Array\(await file\.arrayBuffer\(\)\)/);
+
+  assert.match(app, /softKeyboard\.querySelectorAll/);
+  assert.match(app, /pointerdown/);
+  assert.match(app, /latchedSoftModifiers/);
+  assert.match(app, /advancedToolsDetails\?\.open/);
+  assert.match(app, /if \(advancedActive\) captureExecutionState\("Frame"\)/);
+  assert.match(app, /if \(debugWorkbenchDetails\?\.open\) updateDebugger\(\)/);
   assert.match(app, /executionHistory\.stepBack\(machine\)/);
   assert.match(app, /parseRzx\(await file\.arrayBuffer\(\),/);
   assert.match(app, /new RzxPlayback\(machine, recording\)/);
-  assert.match(app, /renderAssemblerReference/);
 });
 
 test("machine selector exposes Spectrum, CP/M, TRS-80, and TI-85 routes", async () => {

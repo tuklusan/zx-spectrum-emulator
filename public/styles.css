@@ -2387,3 +2387,38 @@ dd {
     width: min(1180px, calc(100vw - 12px));
   }
 }
+
+/* Play first: screen, Spectrum keyboard, loaders, then optional tools. */
+.spectrum-play-shell{width:min(980px,100%);margin:0 auto;display:grid;gap:14px}
+.spectrum-play-console{display:grid;gap:12px}
+.spectrum-screen-window{min-width:0;min-height:0;overflow:hidden}
+.spectrum-screen-header{min-height:42px}
+.spectrum-screen-header output{margin-left:auto}
+.spectrum-play-console .screen-wrap{min-height:0;background:#050505}
+.spectrum-play-console #screen,.spectrum-play-console #rasterOverlay{width:100%;max-height:none}
+.spectrum-keyboard-panel,.quick-loader-card,.advanced-tools,.advanced-control-card{border:1px solid var(--line);border-radius:8px;background:rgba(10,13,12,.78)}
+.spectrum-keyboard-panel{display:grid;gap:8px;padding:10px}
+.spectrum-keyboard-panel>header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.spectrum-keyboard-panel h2,.quick-loader-card h2,.advanced-control-card h2{margin:0;font-size:14px}
+.spectrum-keyboard-panel p{margin:0;color:var(--muted);font-size:11px}
+.spectrum-keyboard{display:grid;gap:clamp(3px,.55vw,6px);touch-action:none;user-select:none;-webkit-user-select:none}
+.spectrum-key-row{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:clamp(3px,.55vw,6px)}
+.spectrum-key{min-width:0;min-height:clamp(42px,6.3vw,58px);border:1px solid #050505;border-radius:5px;background:linear-gradient(180deg,#393939,#171717);color:#f7f7ee;box-shadow:inset 0 1px rgba(255,255,255,.14),inset 0 -3px rgba(0,0,0,.48),0 2px 0 #050505;padding:2px;font:800 clamp(10px,1.75vw,15px)/1.05 "Inter","Avenir Next",system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+.spectrum-key.modifier{color:#f3d447;font-size:clamp(8px,1.35vw,12px)}
+.spectrum-key.is-pressed,.spectrum-key:active{transform:translateY(2px);background:linear-gradient(180deg,#181818,#303030);box-shadow:inset 0 2px rgba(0,0,0,.55)}
+.spectrum-key.is-latched{border-color:#16c7bd;outline:2px solid rgba(22,199,189,.62);background:linear-gradient(180deg,#1c4945,#102522);color:#fff}
+.quick-loaders{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quick-loader-card{display:grid;align-content:start;gap:8px;min-width:0;padding:12px}
+.play-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.advanced-tools{overflow:hidden}
+.advanced-tools>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none;padding:12px 14px}
+.advanced-tools>summary::-webkit-details-marker{display:none}
+.advanced-tools>summary span{font-weight:850}
+.advanced-tools>summary strong{color:var(--muted);font-size:12px;font-weight:600;text-align:right}
+.advanced-tools-body{display:grid;gap:12px;border-top:1px solid var(--line);padding:12px}
+.advanced-control-card{display:grid;gap:10px;padding:12px}
+.advanced-tool-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+.spectrum-page-content>.spectrum-seo-hero{margin-top:clamp(22px,4vw,42px)}
+@media(max-width:760px){
+.spectrum-page-body{padding:8px;align-items:start}.spectrum-page-content{width:100%}.spectrum-play-shell{width:100%;gap:8px}.spectrum-play-console{gap:8px}.spectrum-keyboard-panel{padding:6px}.spectrum-keyboard-panel>header{display:grid;gap:3px}.spectrum-keyboard-panel p{font-size:10px}.spectrum-keyboard,.spectrum-key-row{gap:3px}.spectrum-key{min-height:clamp(34px,10vw,42px);border-radius:4px;padding:1px;font-size:clamp(9px,3.2vw,12px)}.spectrum-key.modifier{font-size:clamp(7px,2.2vw,9px)}.quick-loaders{grid-template-columns:1fr}.play-controls{grid-template-columns:repeat(3,minmax(0,1fr))}.play-controls button{min-height:36px;padding-inline:5px;font-size:12px}.advanced-tools>summary{align-items:start}.advanced-tools>summary strong{max-width:54%;font-size:10px}.advanced-tool-tabs{grid-template-columns:1fr}}
+@media(max-width:430px){.spectrum-page-body{padding:4px}.spectrum-screen-header{padding:6px 8px}.spectrum-keyboard-panel{border-radius:6px;padding:5px}.spectrum-keyboard-panel h2{font-size:12px}.spectrum-keyboard-panel p{display:none}.spectrum-key,.spectrum-key.modifier{min-height:32px}.quick-loader-card{padding:9px}}

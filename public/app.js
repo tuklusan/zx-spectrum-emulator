@@ -17,7 +17,7 @@ import {
   shouldCaptureModernKeyEvent,
   shouldPreventBrowserScrollKey,
   spectrumKeysForModernKey
-} from "./keyboard.js?v=20261004-tzx-url";
+} from "./keyboard.js?v=20261005-play-first";
 import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { loadTapEntry, parseTapeFile, tapEntries } from "./tape.js?v=20261004-tzx-url";
@@ -75,6 +75,9 @@ const sourceListing = document.querySelector("#sourceListing");
 const assemblerSearchInput = document.querySelector("#assemblerSearch");
 const assemblerCategoryInput = document.querySelector("#assemblerCategory");
 const assemblerReference = document.querySelector("#assemblerReference");
+const softKeyboard = document.querySelector("#spectrumKeyboard");
+const advancedToolsDetails = document.querySelector("#advancedTools");
+const debugWorkbenchDetails = document.querySelector("#debugWorkbench");
 
 let rom;
 let machine;
@@ -94,6 +97,7 @@ const executionHistory = new MachineHistory({ limit: 6000, byteLimit: 64 * 1024 
 let rzxPlayback;
 let rzxPlaying = false;
 let sourceRows = [];
+let assemblerReferenceInitialized = false;
 
 initializeDebugWindows({ onStatus: (message) => { statusOutput.value = message; } });
 
@@ -214,7 +218,7 @@ function drawSpectrumScreen() {
   const frame = machine.renderFrameRgba({ flashOn });
   const imageData = new ImageData(frame, Spectrum48.FRAME_WIDTH, Spectrum48.FRAME_HEIGHT);
   context.putImageData(imageData, 0, 0);
-  drawRasterOverlay();
+  if (advancedToolsDetails?.open && showRasterOverlayInput.checked) drawRasterOverlay();
 }
 
 function drawRasterOverlay() {
@@ -249,8 +253,9 @@ function updateRasterTelemetry() {
 
 function refreshDebugDisplay() {
   drawSpectrumScreen();
-  updateDebugger();
+  if (!advancedToolsDetails?.open) return;
   updateRasterTelemetry();
+  if (debugWorkbenchDetails?.open) updateDebugger();
 }
 
 function tapSpectrumKeys(keys, holdFrames = 4, gapFrames = 4) {
@@ -436,11 +441,12 @@ function renderTapList() {
 
 function draw() {
   if (!machine) return;
+  const advancedActive = advancedToolsDetails?.open === true;
 
   if (running) {
     if (rzxPlaying && rzxPlayback) {
       try {
-        captureExecutionState("RZX frame");
+        if (advancedActive) captureExecutionState("RZX frame");
         const frame = rzxPlayback.stepFrame();
         if (!frame || rzxPlayback.done) {
           rzxPlaying = false;
@@ -456,7 +462,7 @@ function draw() {
         statusOutput.value = error.message;
       }
     } else {
-      captureExecutionState("Frame");
+      if (advancedActive) captureExecutionState("Frame");
       if (machine.tapePlaying) runFastTapeBurst();
       else runMachineFrame();
     }
@@ -466,18 +472,20 @@ function draw() {
   }
 
   drawSpectrumScreen();
-  frameOutput.textContent = String(machine.frame);
-  pcOutput.textContent = formatWord(machine.cpu.PC);
-  borderOutput.textContent = String(machine.borderColor);
-  updateRasterTelemetry();
-  lastKeyOutput.textContent = lastModernKey;
-  mappedKeysOutput.textContent = lastMappedKeys.length ? lastMappedKeys.join(" + ") : "-";
-  heldKeysOutput.textContent = machine.getPressedKeys().join(" + ") || "-";
-  updateDebugger();
+
+  if (advancedActive) {
+    frameOutput.textContent = String(machine.frame);
+    pcOutput.textContent = formatWord(machine.cpu.PC);
+    borderOutput.textContent = String(machine.borderColor);
+    updateRasterTelemetry();
+    lastKeyOutput.textContent = lastModernKey;
+    mappedKeysOutput.textContent = lastMappedKeys.length ? lastMappedKeys.join(" + ") : "-";
+    heldKeysOutput.textContent = machine.getPressedKeys().join(" + ") || "-";
+    if (debugWorkbenchDetails?.open) updateDebugger();
+  }
 
   requestAnimationFrame(draw);
 }
-
 function updateDebugger() {
   const state = machine.cpu.getState();
   const registers = state.registers;
@@ -625,6 +633,76 @@ function stepRzxFrame() {
     statusOutput.value = `RZX frame ${rzxPlayback.frameIndex}`;
   }
   refreshDebugDisplay();
+}
+
+const SOFT_MODIFIERS = new Set(["CAPS SHIFT", "SYMBOL SHIFT"]);
+const softPointers = new Map();
+const latchedSoftModifiers = new Set();
+
+function updateSoftModifierButtons() {
+  for (const button of softKeyboard?.querySelectorAll(".modifier") ?? []) {
+    const pressed = latchedSoftModifiers.has(button.dataset.spectrumKey);
+    button.classList.toggle("is-latched", pressed);
+    button.setAttribute("aria-pressed", String(pressed));
+  }
+}
+
+function consumeLatchedSoftModifiers() {
+  for (const key of latchedSoftModifiers) machine?.releaseKey(key);
+  latchedSoftModifiers.clear();
+  updateSoftModifierButtons();
+}
+
+function releaseSoftPointer(pointerId) {
+  const state = softPointers.get(pointerId);
+  if (!state || !machine) return;
+  softPointers.delete(pointerId);
+  state.button.classList.remove("is-pressed");
+
+  if (state.modifier) {
+    if (state.usedInChord) machine.releaseKey(state.key);
+    else latchedSoftModifiers.add(state.key);
+    updateSoftModifierButtons();
+    return;
+  }
+
+  machine.releaseKey(state.key);
+  consumeLatchedSoftModifiers();
+}
+
+for (const button of softKeyboard?.querySelectorAll("[data-spectrum-key]") ?? []) {
+  button.addEventListener("pointerdown", (event) => {
+    if (!machine) return;
+    event.preventDefault();
+    const key = button.dataset.spectrumKey;
+    const modifier = SOFT_MODIFIERS.has(key);
+
+    if (modifier && latchedSoftModifiers.has(key)) {
+      machine.releaseKey(key);
+      latchedSoftModifiers.delete(key);
+      updateSoftModifierButtons();
+      return;
+    }
+
+    for (const state of softPointers.values()) {
+      if (state.modifier) state.usedInChord = true;
+    }
+
+    machine.pressKey(key);
+    button.classList.add("is-pressed");
+    softPointers.set(event.pointerId, { key, button, modifier, usedInChord: false });
+    button.setPointerCapture?.(event.pointerId);
+    lastModernKey = key;
+    lastMappedKeys = [key];
+  });
+
+  button.addEventListener("pointerup", (event) => {
+    event.preventDefault();
+    releaseSoftPointer(event.pointerId);
+  });
+  button.addEventListener("pointercancel", (event) => releaseSoftPointer(event.pointerId));
+  button.addEventListener("lostpointercapture", (event) => releaseSoftPointer(event.pointerId));
+  button.addEventListener("contextmenu", (event) => event.preventDefault());
 }
 
 window.addEventListener("keydown", (event) => {
@@ -785,7 +863,26 @@ for (const button of toolTabButtons) {
   });
 }
 
-showRasterOverlayInput.addEventListener("change", drawRasterOverlay);
+showRasterOverlayInput.addEventListener("change", () => {
+  if (showRasterOverlayInput.checked && advancedToolsDetails?.open) drawRasterOverlay();
+  else rasterContext.clearRect(0, 0, rasterOverlay.width, rasterOverlay.height);
+});
+
+advancedToolsDetails?.addEventListener("toggle", () => {
+  if (!advancedToolsDetails.open) {
+    rasterContext.clearRect(0, 0, rasterOverlay.width, rasterOverlay.height);
+    return;
+  }
+  if (!assemblerReferenceInitialized) {
+    renderAssemblerReference();
+    assemblerReferenceInitialized = true;
+  }
+  refreshDebugDisplay();
+});
+
+debugWorkbenchDetails?.addEventListener("toggle", () => {
+  if (debugWorkbenchDetails.open && advancedToolsDetails?.open && machine) updateDebugger();
+});
 
 tapFileInput.addEventListener("change", async () => {
   const file = tapFileInput.files?.[0];
@@ -979,7 +1076,6 @@ pasteForm.addEventListener("submit", (event) => {
 });
 
 try {
-  renderAssemblerReference();
   await loadRom();
   resetMachine();
   try {
