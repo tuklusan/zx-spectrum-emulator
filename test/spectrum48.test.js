@@ -198,7 +198,7 @@ test("reports currently pressed Spectrum keys for diagnostics", () => {
 });
 
 test("keeps a key down until every input owner releases it", () => {
-  const machine = makeMachine();
+  const machine = new Spectrum48({ rom: makeRom() });
   machine.pressKey("A");
   machine.pressKey("A");
   machine.releaseKey("A");
@@ -208,7 +208,7 @@ test("keeps a key down until every input owner releases it", () => {
 });
 
 test("restores keyboard ownership counts with machine state", () => {
-  const machine = makeMachine();
+  const machine = new Spectrum48({ rom: makeRom() });
   machine.pressKey("A");
   machine.pressKey("A");
   const state = machine.saveState();
