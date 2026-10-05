@@ -54,9 +54,10 @@ The first ZX Spectrum 48K machine layer is in place:
   categorized searchable reference covers common sjasmplus directives,
   expressions, output formats, debugging features, and functions and links to
   the complete versioned documentation.
-- `.tap` files and standard-speed `.tzx` blocks can be parsed in the browser,
-  inspected as tape blocks, and fast-loaded for BASIC program and CODE
-  header/data pairs.
+- `.tap` and `.tzx` files mount as complete virtual cassettes and autoload from
+  block 0. TZX playback covers standard, turbo, pure-tone, pulse-sequence,
+  pure-data, direct-recording, generalized-data, pause, and 48K tape-control
+  blocks.
 - `.z80` and classic 48K `.sna` snapshots can be loaded and the current machine
   state can be saved as an uncompressed 48K `.z80` snapshot for returning to
   BASIC programs or game positions later.
@@ -189,22 +190,19 @@ disk using the same tokenizer as paste loading. `Export BASIC` reads the current
 program from `PROG` to `VARS`, detokenizes Spectrum keyword bytes, skips hidden
 numeric markers, and downloads editable text as `zx-spectrum-program.bas`.
 
-The `Load TAP` panel accepts `.tap` and `.tzx` files. TAP containers and
-standard-speed TZX data blocks are parsed into header/data blocks, showing block
-name, type, length, checksum status, and whether the entry can be loaded by the
-current fast-load path. Parsed files are also mounted as a virtual tape for the
-Spectrum ROM loader. BASIC program entries are copied directly to the ROM BASIC
-program area and auto-start with `RUN <line>` when the header contains an
-auto-start line; later ROM `LOAD "" CODE` calls made by that loader are
-satisfied from the mounted blocks in order. CODE entries can also be copied
-directly to the start address from the header. When a loader drops into tape
-polling instead of the ROM byte-loader entry point, standard-speed tape blocks
-are played as EAR pulses on port `0xfe`. Array blocks, turbo/pure-data TZX
-blocks, and more exact custom-loader timing are later work.
+The `Load Spectrum media` panel accepts `.tap`, `.tzx`, `.sna`, `.z80`,
+`.rzx`, and ZIP files containing one supported Spectrum file. TAP and TZX
+files are mounted as complete virtual cassettes and autoload from block 0; there
+is no per-block picker because the Spectrum loader can ask for the next block
+itself. Compatible ROM loads can use the fast-load path, while custom loaders
+see timed EAR transitions on port `0xfe`.
 
-During pulse playback, flashing border colours are expected: that is the loader
-polling the tape input. Large standard-speed blocks load at cassette speed, so a
-50K-ish block can take around two minutes to finish.
+TZX signal playback covers standard and turbo data, pure tones, arbitrary pulse
+sequences, pure data, direct recording, generalized data, pauses, signal-level
+changes, and the 48K stop-tape command. Unsupported flow-control or recording
+blocks are rejected by block ID and name instead of being guessed. Tape loading
+is accelerated in short host-time bursts while preserving emulated T-state
+timing.
 
 The `Snapshots` panel accepts `.z80` files. Loading a snapshot restores the
 Z80 registers, interrupt state, border colour, and all 48K RAM. Version 1

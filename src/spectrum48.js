@@ -243,6 +243,7 @@ export class Spectrum48 {
       }
 
       const completed = this.tapePlaybackBlockIndex;
+      this.tapeEarLevel = sequence.endingLevel;
       this.tapePlaybackBlockIndex += 1;
       if (this.tapeCursor <= completed) this.tapeCursor = this.tapePlaybackBlockIndex;
     }
@@ -276,6 +277,45 @@ export class Spectrum48 {
       level = false;
       if (remaining > 0) pushInterval(remaining);
     };
+    const appendSignal = (signal, payload) => {
+      if (!signal) return;
+      if (signal.kind === "pure-tone") {
+        for (let pulse = 0; pulse < signal.pulseCount; pulse += 1) pushPulse(signal.pulseTStates);
+        return;
+      }
+      if (signal.kind === "pulse-sequence") {
+        for (const duration of signal.pulses) pushPulse(duration);
+        return;
+      }
+      if (signal.kind === "pure-data") {
+        const lastBits = payload.length === 0 ? 0 : signal.usedBitsLastByte;
+        for (let byteIndex = 0; byteIndex < payload.length; byteIndex += 1) {
+          const bits = byteIndex === payload.length - 1 ? lastBits : 8;
+          for (let bit = 7; bit >= 8 - bits; bit -= 1) {
+            const duration = (payload[byteIndex] & (1 << bit)) === 0 ? signal.zero : signal.one;
+            pushPulse(duration);
+            pushPulse(duration);
+          }
+        }
+        return;
+      }
+      if (signal.kind === "direct-recording") {
+        const lastBits = payload.length === 0 ? 0 : signal.usedBitsLastByte;
+        for (let byteIndex = 0; byteIndex < payload.length; byteIndex += 1) {
+          const bits = byteIndex === payload.length - 1 ? lastBits : 8;
+          for (let bit = 7; bit >= 8 - bits; bit -= 1) {
+            level = (payload[byteIndex] & (1 << bit)) !== 0;
+            pushInterval(signal.sampleTStates);
+          }
+        }
+        return;
+      }
+      if (signal.kind === "set-level") {
+        level = Boolean(signal.level);
+        return;
+      }
+      throw new Error("Unsupported TZX signal kind " + signal.kind);
+    };
     const appendSymbol = (symbol) => {
       switch (symbol.flags & 0x03) {
         case 0: level = !level; break;
@@ -293,7 +333,8 @@ export class Spectrum48 {
 
     if (initialPauseMs > 0) pushInterval(Math.round(initialPauseMs * T_STATES_PER_MS));
     const block = this.tapeBlocks[index];
-    if (block?.generalized) this.appendGeneralizedBlockPulses(appendSymbol, block.generalized);
+    if (block?.signal) appendSignal(block.signal, block.payload);
+    else if (block?.generalized) this.appendGeneralizedBlockPulses(appendSymbol, block.generalized);
     else if (block) this.appendDataBlockPulses(pushPulse, block);
     if (block?.pauseMs > 0) appendPause(block.pauseMs);
 

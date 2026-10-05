@@ -303,6 +303,88 @@ function generalizedFastTzxBlock(data) {
     0, ...le16(128), 1, ...le16(1), 0, ...le16(855), 0, ...le16(1710), ...data];
   return [0x19, ...le32(body.length), ...body];
 }
+function pureToneTzxBlock(pulseTStates, pulseCount) {
+  return [0x12, ...le16(pulseTStates), ...le16(pulseCount)];
+}
+function pulseSequenceTzxBlock(pulses) {
+  return [0x13, pulses.length, ...pulses.flatMap(le16)];
+}
+function pureDataTzxBlock(data, { zero = 855, one = 1710, usedBitsLastByte = 8, pauseMs = 0 } = {}) {
+  return [0x14, ...le16(zero), ...le16(one), usedBitsLastByte, ...le16(pauseMs), ...le24(data.length), ...data];
+}
+function directRecordingTzxBlock(data, { sampleTStates = 79, usedBitsLastByte = 8, pauseMs = 0 } = {}) {
+  return [0x15, ...le16(sampleTStates), ...le16(pauseMs), usedBitsLastByte, ...le24(data.length), ...data];
+}
+
+test("plays TZX pure tone and pulse sequence blocks", () => {
+  const blocks = parseTzx(makeTzx([
+    pureToneTzxBlock(100, 3),
+    pulseSequenceTzxBlock([10, 20, 30])
+  ]));
+  assert.deepEqual(blocks.map((block) => block.type), ["pure-tone", "pulse-sequence"]);
+
+  const machine = makeMachine();
+  machine.setTapeBlocks(blocks);
+  const tone = machine.buildTapeBlockPulseSequence(0, 0, false);
+  assert.deepEqual(Array.from(tone.durations), [100, 100, 100]);
+  assert.deepEqual(Array.from(tone.levels), [0, 1, 0]);
+  const sequence = machine.buildTapeBlockPulseSequence(1, 0, tone.endingLevel);
+  assert.deepEqual(Array.from(sequence.durations), [10, 20, 30]);
+  assert.deepEqual(Array.from(sequence.levels), [1, 0, 1]);
+});
+
+test("plays TZX pure-data bits without pilot or sync pulses", () => {
+  const [block] = parseTzx(makeTzx([
+    pureDataTzxBlock([0x80], { zero: 20, one: 40, usedBitsLastByte: 2 })
+  ]));
+  const machine = makeMachine();
+  machine.setTapeBlocks([block]);
+  const sequence = machine.buildTapeBlockPulseSequence(0, 0, false);
+
+  assert.equal(block.type, "pure-data");
+  assert.deepEqual(Array.from(sequence.durations), [40, 40, 20, 20]);
+  assert.deepEqual(Array.from(sequence.levels), [0, 1, 0, 1]);
+});
+
+test("plays TZX direct recording as literal EAR sample levels", () => {
+  const [block] = parseTzx(makeTzx([
+    directRecordingTzxBlock([0xa0], { sampleTStates: 5, usedBitsLastByte: 4 })
+  ]));
+  const machine = makeMachine();
+  machine.setTapeBlocks([block]);
+  const sequence = machine.buildTapeBlockPulseSequence(0, 0, false);
+
+  assert.equal(block.type, "direct-recording");
+  assert.deepEqual(Array.from(sequence.durations), [5, 5, 5, 5]);
+  assert.deepEqual(Array.from(sequence.levels), [1, 0, 1, 0]);
+  assert.equal(sequence.endingLevel, false);
+});
+
+test("honours TZX set-level and stop-if-48K control blocks", () => {
+  const blocks = parseTzx(makeTzx([
+    [0x2b, ...le32(1), 1],
+    pureToneTzxBlock(100, 2),
+    [0x2a, ...le32(0)],
+    pureToneTzxBlock(200, 2)
+  ]));
+  assert.deepEqual(blocks.map((block) => block.type), ["set-signal-level", "pure-tone", "stop-48k", "pure-tone"]);
+
+  const machine = makeMachine();
+  machine.setTapeBlocks(blocks);
+  machine.startTapePlayback();
+  assert.equal(machine.tapePlaybackBlockIndex, 1);
+  assert.equal(machine.tapePulseLevels[0], 1);
+
+  const duration = machine.tapePulseDurations.reduce((sum, value) => sum + value, 0);
+  machine.cpu.tStates = duration;
+  machine.advanceTapePlayback();
+  assert.equal(machine.tapePlaying, false);
+  assert.equal(machine.tapeCursor, 3);
+});
+
+test("names unsupported TZX signal blocks precisely", () => {
+  assert.throws(() => parseTzx(makeTzx([[0x18]])), /0x18 \(CSW recording\)/);
+});
 
 test("parses TZX turbo blocks with their recorded timings", () => {
   const blocks = parseTzx(makeTzx([turboTzxBlock(dataBlock([0x80]).slice(2), { pilotCount: 2420, pauseMs: 0 })]));
