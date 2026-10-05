@@ -386,18 +386,25 @@ function mountTapeBytes(input, label = "tape") {
 }
 
 function enterRomTapeLoad() {
+  const runUntilLoaderOr = (deadline) => {
+    while (machine.cpu.PC !== 0x0556 && machine.cpu.tStates < deadline) {
+      machine.step();
+    }
+    return machine.cpu.PC === 0x0556;
+  };
+
   machine.pressKey("ENTER");
-  runFrames(2);
+  const pressedDeadline = machine.cpu.tStates + (Spectrum48.T_STATES_PER_FRAME * 2);
+  let enteredLoader = runUntilLoaderOr(pressedDeadline);
   machine.releaseKey("ENTER");
 
-  const deadline = machine.cpu.tStates + (Spectrum48.T_STATES_PER_FRAME * 6);
-  while (machine.cpu.PC !== 0x0556 && machine.cpu.tStates < deadline) {
-    machine.step();
+  if (!enteredLoader) {
+    const releasedDeadline = machine.cpu.tStates + (Spectrum48.T_STATES_PER_FRAME * 4);
+    enteredLoader = runUntilLoaderOr(releasedDeadline);
   }
+
   machine.drainBeeperEvents();
-  if (machine.cpu.PC !== 0x0556) {
-    throw new Error("Spectrum ROM did not enter the tape loader");
-  }
+  if (!enteredLoader) throw new Error("Spectrum ROM did not enter the tape loader");
 }
 
 function autoloadMountedTape() {
