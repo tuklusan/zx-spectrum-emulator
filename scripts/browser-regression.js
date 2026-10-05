@@ -19,7 +19,9 @@ const fixtures = [
   },
   {
     name: "dreamwalker",
-    url: "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip",
+    // The Spectrum Computing copy is the archive reference. Its browser-facing
+    // mirror is currently unreliable, so use the author's ZIP for the live gate.
+    url: "https://www.retrosouls.net/zx/dreamwalker.zip",
     budgetMs: 30_000
   }
 ];
@@ -112,8 +114,12 @@ function directLaunchUrl(tapeUrl) {
 
 function assertHealthyDom(html, label) {
   if (!html.includes('id="screen"')) throw new Error(`${label}: Spectrum canvas is missing`);
-  if (/Load failed:|Media fetch failed:|Tape URL contains|Unsupported Spectrum media/i.test(html)) {
-    throw new Error(`${label}: browser page reports a media-load failure`);
+  const status = html.match(/<output[^>]*id="status"[^>]*>([^<]*)<\/output>/i)?.[1]?.trim() ?? "";
+  const mediaStatusTag = html.match(/<output[^>]*id="mediaStatus"[^>]*>/i)?.[0] ?? "";
+  const mediaStatus = html.match(/<output[^>]*id="mediaStatus"[^>]*>([^<]*)<\/output>/i)?.[1]?.trim() ?? "";
+  if (/fail|error|unsupported/i.test(status)
+      || (/fail|error|unsupported/i.test(mediaStatus) && !/hidden(?:=""|\s|>)/i.test(mediaStatusTag))) {
+    throw new Error(`${label}: browser page reports a media-load failure: ${status || mediaStatus}`);
   }
   const gate = html.match(/<button[^>]*id="audioStartGate"[^>]*>/i)?.[0] ?? "";
   if (gate && !/hidden(?:=""|\s|>)/i.test(gate)) {
