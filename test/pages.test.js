@@ -175,6 +175,11 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /if \(!prepareAutoloadAudio\(\)\) await waitForAutoloadAudioGesture\(\)/);
   assert.match(app, /audioStartGate\.hidden = false/);
   assert.match(app, /await audio\.resume\(\)/);
+  assert.match(app, /const SPECTRUM_FRAME_MS = 20/);
+  assert.match(app, /frameAccumulatorMs \+= elapsed/);
+  assert.match(app, /while \(frameAccumulatorMs >= SPECTRUM_FRAME_MS/);
+  assert.match(app, /function runRzxFrame/);
+  assert.match(app, /pumpAudio\(\);/);
   assert.match(app, /function showMediaError/);
   assert.match(app, /load failed\|failed to fetch/);
   assert.match(app, /remote server blocked browser access \(CORS\)/);

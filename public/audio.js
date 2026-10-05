@@ -36,22 +36,44 @@ export function createBeeperSamples(
 }
 
 export class BeeperAudio {
-  constructor({ AudioContextClass = globalThis.AudioContext ?? globalThis.webkitAudioContext } = {}) {
+  constructor({
+    AudioContextClass = globalThis.AudioContext ?? globalThis.webkitAudioContext,
+    maxLeadSeconds = 0.1
+  } = {}) {
     if (!AudioContextClass) throw new Error("Web Audio is not available");
     this.context = new AudioContextClass();
+    this.maxLeadSeconds = maxLeadSeconds;
     this.nextTime = this.context.currentTime;
     this.level = false;
     this.lastTState = 0;
+    this.sources = new Set();
   }
 
   async resume() {
     if (this.context.state !== "running") await this.context.resume();
   }
 
+  cancelScheduled() {
+    for (const source of this.sources) {
+      try {
+        source.stop();
+      } catch {
+        // Already stopped. Web Audio is fussy about goodbyes.
+      }
+      try {
+        source.disconnect();
+      } catch {
+        // Some test doubles and old browsers do not care.
+      }
+    }
+    this.sources.clear();
+    this.nextTime = this.context.currentTime;
+  }
+
   reset(tState = 0) {
+    this.cancelScheduled();
     this.level = false;
     this.lastTState = tState;
-    this.nextTime = this.context.currentTime;
   }
 
   push(events, toTState) {
@@ -69,9 +91,22 @@ export class BeeperAudio {
     const buffer = this.context.createBuffer(1, samples.length, this.context.sampleRate);
     buffer.copyToChannel(samples, 0);
 
+    if (this.nextTime - this.context.currentTime > this.maxLeadSeconds) {
+      this.cancelScheduled();
+    }
+
     const source = this.context.createBufferSource();
     source.buffer = buffer;
     source.connect(this.context.destination);
+    source.onended = () => {
+      this.sources.delete(source);
+      try {
+        source.disconnect();
+      } catch {
+        // Nothing left to unplug.
+      }
+    };
+    this.sources.add(source);
     const startTime = Math.max(this.context.currentTime + 0.02, this.nextTime);
     source.start(startTime);
     this.nextTime = startTime + buffer.duration;

@@ -88,6 +88,8 @@ let machine;
 let audio;
 let audioEnabled = true;
 const TAPE_TURBO_FRAMES_PER_DRAW = 32;
+const SPECTRUM_FRAME_MS = 20;
+const MAX_FRAME_CATCHUP = 5;
 let running = true;
 let flashOn = false;
 let physicalShiftDown = false;
@@ -102,6 +104,8 @@ let rzxPlayback;
 let rzxPlaying = false;
 let sourceRows = [];
 let assemblerReferenceInitialized = false;
+let lastDrawTime;
+let frameAccumulatorMs = 0;
 
 initializeDebugWindows({ onStatus: (message) => { statusOutput.value = message; } });
 
@@ -192,9 +196,10 @@ function pumpAudio() {
   audio.push(events, machine.cpu.tStates);
 }
 
-function runMachineFrame() {
+function runMachineFrame({ audioOutput = true } = {}) {
   machine.runFrame();
-  pumpAudio();
+  if (audioOutput) pumpAudio();
+  else machine.drainBeeperEvents();
 }
 
 function runFastTapeBurst() {
@@ -212,10 +217,11 @@ function stepInstruction() {
   pumpAudio();
 }
 
-function runFrames(count) {
+function runFrames(count, { audioOutput = false } = {}) {
   for (let frame = 0; frame < count; frame += 1) {
-    runMachineFrame();
+    runMachineFrame({ audioOutput });
   }
+  if (!audioOutput) audio?.reset(machine.cpu.tStates);
 }
 
 function drawSpectrumScreen() {
@@ -587,36 +593,55 @@ function renderTapList() {
   }
 }
 
-function draw() {
+function runRzxFrame(advancedActive = false) {
+  try {
+    if (advancedActive) captureExecutionState("RZX frame");
+    const frame = rzxPlayback.stepFrame();
+    pumpAudio();
+    if (!frame || rzxPlayback.done) {
+      rzxPlaying = false;
+      running = false;
+      rzxPlayPauseButton.textContent = "Play RZX";
+      statusOutput.value = `RZX playback complete (${rzxPlayback.frameIndex} frames)`;
+    }
+    rzxStatusOutput.value = `${rzxPlayback.frameIndex}/${rzxPlayback.recording.frameCount} frames`;
+  } catch (error) {
+    rzxPlaying = false;
+    running = false;
+    rzxPlayPauseButton.textContent = "Play RZX";
+    statusOutput.value = error.message;
+  }
+}
+
+function draw(timestamp) {
   if (!machine) return;
   const advancedActive = advancedToolsDetails?.open === true;
+  const now = Number.isFinite(timestamp) ? timestamp : performance.now();
+  if (lastDrawTime === undefined) lastDrawTime = now;
+  const elapsed = Math.max(0, Math.min(now - lastDrawTime, SPECTRUM_FRAME_MS * MAX_FRAME_CATCHUP));
+  lastDrawTime = now;
 
   if (running) {
-    if (rzxPlaying && rzxPlayback) {
-      try {
-        if (advancedActive) captureExecutionState("RZX frame");
-        const frame = rzxPlayback.stepFrame();
-        if (!frame || rzxPlayback.done) {
-          rzxPlaying = false;
-          running = false;
-          rzxPlayPauseButton.textContent = "Play RZX";
-          statusOutput.value = `RZX playback complete (${rzxPlayback.frameIndex} frames)`;
-        }
-        rzxStatusOutput.value = `${rzxPlayback.frameIndex}/${rzxPlayback.recording.frameCount} frames`;
-      } catch (error) {
-        rzxPlaying = false;
-        running = false;
-        rzxPlayPauseButton.textContent = "Play RZX";
-        statusOutput.value = error.message;
-      }
+    if (machine.tapePlaying && !rzxPlaying) {
+      frameAccumulatorMs = 0;
+      runFastTapeBurst();
     } else {
-      if (advancedActive) captureExecutionState("Frame");
-      if (machine.tapePlaying) runFastTapeBurst();
-      else runMachineFrame();
+      frameAccumulatorMs += elapsed;
+      let frames = 0;
+      while (frameAccumulatorMs >= SPECTRUM_FRAME_MS && frames < MAX_FRAME_CATCHUP && running) {
+        if (rzxPlaying && rzxPlayback) runRzxFrame(advancedActive);
+        else {
+          if (advancedActive) captureExecutionState("Frame");
+          runMachineFrame();
+        }
+        frameAccumulatorMs -= SPECTRUM_FRAME_MS;
+        frames += 1;
+      }
     }
     flashOn = Math.floor(machine.frame / 16) % 2 === 1;
   } else {
-    pumpAudio();
+    frameAccumulatorMs = 0;
+    machine.drainBeeperEvents();
   }
 
   drawSpectrumScreen();
@@ -772,6 +797,7 @@ function stepRzxFrame() {
   if (!rzxPlayback || rzxPlayback.done) return;
   captureExecutionState("RZX frame");
   const frame = rzxPlayback.stepFrame();
+  pumpAudio();
   rzxStatusOutput.value = `${rzxPlayback.frameIndex}/${rzxPlayback.recording.frameCount} frames`;
   if (!frame || rzxPlayback.done) {
     rzxStepButton.disabled = true;
@@ -998,6 +1024,7 @@ audioToggleButton.addEventListener("click", async () => {
       audio.reset(machine.cpu.tStates);
     }
     audioEnabled = nextEnabled;
+    if (!audioEnabled) audio?.reset(machine.cpu.tStates);
     audioToggleButton.textContent = audioEnabled ? "Sound On" : "Sound Off";
     audioToggleButton.setAttribute("aria-pressed", String(audioEnabled));
     statusOutput.value = audioEnabled ? "Sound enabled" : "Sound disabled";
