@@ -90,6 +90,8 @@ export class Spectrum48 {
     this.tapePulseLevels = new Uint8Array();
     this.tapePulseIndex = 0;
     this.tapeNextPulseTState = 0;
+    this.tapeSequenceInitialLevel = false;
+    this.tapeSequenceInitialPauseMs = 0;
     this.tapeSequenceEndingLevel = false;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
@@ -211,6 +213,8 @@ export class Spectrum48 {
     this.tapePulseLevels = new Uint8Array();
     this.tapePulseIndex = 0;
     this.tapeNextPulseTState = 0;
+    this.tapeSequenceInitialLevel = false;
+    this.tapeSequenceInitialPauseMs = 0;
     this.tapeSequenceEndingLevel = false;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
@@ -219,9 +223,13 @@ export class Spectrum48 {
   loadTapeBlockPulseSequence(initialPauseMs = 0, startTState = this.cpu.tStates) {
     let pauseMs = initialPauseMs;
     while (this.tapeCursor < this.tapeBlocks.length) {
-      const sequence = this.buildTapeBlockPulseSequence(this.tapeCursor, pauseMs, this.tapeEarLevel);
+      const sequenceInitialLevel = this.tapeEarLevel;
+      const sequenceInitialPauseMs = pauseMs;
+      const sequence = this.buildTapeBlockPulseSequence(this.tapeCursor, sequenceInitialPauseMs, sequenceInitialLevel);
       pauseMs = 0;
       if (sequence.durations.length > 0) {
+        this.tapeSequenceInitialLevel = sequenceInitialLevel;
+        this.tapeSequenceInitialPauseMs = sequenceInitialPauseMs;
         this.tapeSequenceEndingLevel = sequence.endingLevel;
         this.tapePulseDurations = sequence.durations;
         this.tapePulseLevels = sequence.levels;
@@ -592,7 +600,9 @@ export class Spectrum48 {
         cursor: this.tapeCursor,
         pulseIndex: this.tapePulseIndex,
         nextPulseTState: this.tapeNextPulseTState,
-        playbackEndCursor: this.tapePlaybackEndCursor,
+        sequenceInitialLevel: this.tapeSequenceInitialLevel,
+        sequenceInitialPauseMs: this.tapeSequenceInitialPauseMs,
+        sequenceEndingLevel: this.tapeSequenceEndingLevel,
         earLevel: this.tapeEarLevel,
         playing: this.tapePlaying
       }
@@ -617,9 +627,27 @@ export class Spectrum48 {
     this.tapeCursor = state.tape?.cursor ?? 0;
     this.tapePulseIndex = state.tape?.pulseIndex ?? 0;
     this.tapeNextPulseTState = state.tape?.nextPulseTState ?? 0;
-    this.tapePlaybackEndCursor = state.tape?.playbackEndCursor ?? 0;
+    this.tapeSequenceInitialLevel = Boolean(state.tape?.sequenceInitialLevel);
+    this.tapeSequenceInitialPauseMs = state.tape?.sequenceInitialPauseMs ?? 0;
+    this.tapeSequenceEndingLevel = Boolean(state.tape?.sequenceEndingLevel);
     this.tapeEarLevel = Boolean(state.tape?.earLevel);
     this.tapePlaying = Boolean(state.tape?.playing);
+    if (this.tapePlaying && this.tapeCursor < this.tapeBlocks.length) {
+      const sequence = this.buildTapeBlockPulseSequence(
+        this.tapeCursor,
+        this.tapeSequenceInitialPauseMs,
+        this.tapeSequenceInitialLevel
+      );
+      this.tapePulseDurations = sequence.durations;
+      this.tapePulseLevels = sequence.levels;
+      this.tapeSequenceEndingLevel = sequence.endingLevel;
+      if (this.tapePulseIndex >= this.tapePulseDurations.length) {
+        throw new Error("ZX Spectrum machine state has an invalid tape pulse index");
+      }
+    } else {
+      this.tapePulseDurations = new Uint32Array();
+      this.tapePulseLevels = new Uint8Array();
+    }
     this.inputPlayback = null;
   }
 

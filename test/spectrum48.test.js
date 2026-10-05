@@ -410,3 +410,41 @@ test("tape playback materializes only the current block", () => {
   assert.equal(machine.tapePlaying, true);
   assert.equal(machine.tapePulseDurations.length, 3273);
 });
+
+
+test("restoring state rebuilds the streamed tape block exactly", () => {
+  const machine = new Spectrum48({ rom: new Uint8Array(0x4000) });
+  const blocks = [{
+    flag: 0xff,
+    payload: new Uint8Array([0x80]),
+    checksum: 0x7f,
+    checksumValid: true,
+    pauseMs: 0,
+    timing: {
+      pilotPulse: 2168,
+      sync1: 667,
+      sync2: 735,
+      zero: 855,
+      one: 1710,
+      pilotCount: 5,
+      usedBitsLastByte: 8
+    }
+  }];
+  machine.setTapeBlocks(blocks);
+  machine.startTapePlayback();
+  machine.cpu.tStates = machine.tapeNextPulseTState;
+  machine.advanceTapePlayback();
+  const saved = machine.saveState();
+  const durations = Array.from(machine.tapePulseDurations);
+  const levels = Array.from(machine.tapePulseLevels);
+
+  machine.stopTapePlayback();
+  machine.restoreState(saved);
+
+  assert.equal(machine.tapePlaying, true);
+  assert.deepEqual(Array.from(machine.tapePulseDurations), durations);
+  assert.deepEqual(Array.from(machine.tapePulseLevels), levels);
+  assert.equal(machine.tapePulseIndex, saved.tape.pulseIndex);
+  assert.equal(machine.tapeNextPulseTState, saved.tape.nextPulseTState);
+  assert.equal(machine.tapeEarLevel, saved.tape.earLevel);
+});
