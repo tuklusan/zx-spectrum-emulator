@@ -21,6 +21,7 @@ import {
 import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { loadTapEntry, parseTapeFile, tapEntries } from "./tape.js?v=20261004-tzx-url";
+import { unwrapSpectrumMedia } from "./media.js?v=20261005-unified-media";
 import { normalizeRemoteFileUrl, normalizeTapeUrl } from "./tape-url.js?v=20261005-url-loaders";
 
 const canvas = document.querySelector("#screen");
@@ -54,17 +55,13 @@ const pasteForm = document.querySelector("#pasteForm");
 const pasteTextInput = document.querySelector("#pasteText");
 const basicFileInput = document.querySelector("#basicFile");
 const basicExportButton = document.querySelector("#basicExport");
-const tapFileInput = document.querySelector("#tapFile");
-const tapUrlInput = document.querySelector("#tapUrl");
-const tapUrlLoadButton = document.querySelector("#tapUrlLoad");
-const tapUrlAutoloadInput = document.querySelector("#tapUrlAutoload");
+const mediaFileInput = document.querySelector("#mediaFile");
+const mediaUrlInput = document.querySelector("#mediaUrl");
+const mediaUrlLoadButton = document.querySelector("#mediaUrlLoad");
+const mediaAutoloadTapeInput = document.querySelector("#mediaAutoloadTape");
 const tapList = document.querySelector("#tapList");
 const tapLoadButton = document.querySelector("#tapLoad");
-const snapshotFileInput = document.querySelector("#snapshotFile");
-const snapshotUrlInput = document.querySelector("#snapshotUrl");
-const snapshotUrlLoadButton = document.querySelector("#snapshotUrlLoad");
 const snapshotSaveButton = document.querySelector("#snapshotSave");
-const rzxFileInput = document.querySelector("#rzxFile");
 const rzxStepButton = document.querySelector("#rzxStep");
 const rzxPlayPauseButton = document.querySelector("#rzxPlayPause");
 const rzxStatusOutput = document.querySelector("#rzxStatus");
@@ -379,7 +376,12 @@ async function loadTapeFromUrl(rawUrl, { autoload = false } = {}) {
   statusOutput.value = "Fetching tape from " + resolvedUrl;
   const response = await fetch(resolvedUrl, { mode: "cors" });
   if (!response.ok) throw new Error("Tape fetch failed: HTTP " + response.status);
-  mountTapeBytes(await response.arrayBuffer(), resolvedUrl);
+  const media = await unwrapSpectrumMedia(await response.arrayBuffer(), response.url || resolvedUrl);
+  if (media.type !== "tap" && media.type !== "tzx") {
+    throw new Error(`Tape URL contains ${media.type.toUpperCase()} media, not TAP/TZX`);
+  }
+  clearRzxPlayback();
+  mountTapeBytes(media.bytes, media.archive ? `${media.archive} → ${media.name}` : media.name);
   if (autoload) autoloadMountedTape();
   return resolvedUrl;
 }
@@ -392,29 +394,18 @@ async function loadTapeQueryParameters() {
   await loadTapeFromUrl(tapeUrl, { autoload });
 }
 
-function snapshotExtensionFromLabel(label) {
-  let pathname;
-  try {
-    pathname = new URL(label, window.location.href).pathname;
-  } catch {
-    pathname = String(label ?? "");
-  }
-  const extension = pathname.split(".").pop()?.toLowerCase() ?? "";
-  if (extension !== "sna" && extension !== "z80") {
-    throw new Error("Snapshot URL must end in .sna or .z80");
-  }
-  return extension;
-}
-
-function loadSnapshotBytes(input, label) {
-  const extension = snapshotExtensionFromLabel(label);
-  const snapshot = applySpectrumSnapshot(machine, input, extension);
+function clearMountedTape() {
   currentTapBlocks = [];
   machine.clearTape();
   currentTapEntries = [];
   selectedTapEntryIndex = -1;
   tapLoadButton.disabled = true;
   renderTapList();
+}
+
+function loadSnapshotBytes(input, label, type) {
+  const snapshot = applySpectrumSnapshot(machine, input, type);
+  clearMountedTape();
   audio?.reset(machine.cpu.tStates);
   clearExecutionHistory();
   clearRzxPlayback();
@@ -423,13 +414,51 @@ function loadSnapshotBytes(input, label) {
   return snapshot;
 }
 
-async function loadSnapshotFromUrl(rawUrl) {
-  const resolvedUrl = normalizeRemoteFileUrl(rawUrl, window.location.href, "Snapshot");
-  snapshotExtensionFromLabel(resolvedUrl);
-  statusOutput.value = "Fetching snapshot from " + resolvedUrl;
+async function loadRzxBytes(input, label) {
+  const recording = await parseRzx(input);
+  clearMountedTape();
+  rzxPlayback = new RzxPlayback(machine, recording);
+  rzxPlaying = false;
+  running = false;
+  runPauseButton.textContent = "Run";
+  runPauseButton.setAttribute("aria-label", "Run");
+  clearExecutionHistory();
+  rzxStepButton.disabled = false;
+  rzxPlayPauseButton.disabled = false;
+  rzxPlayPauseButton.textContent = "Play RZX";
+  rzxStatusOutput.value = `0/${recording.frameCount} frames · ${recording.creator}`;
+  statusOutput.value = `Loaded RZX ${label}`;
+  refreshDebugDisplay();
+  return recording;
+}
+
+async function loadSpectrumMediaBytes(input, label, { autoloadTape = false } = {}) {
+  const media = await unwrapSpectrumMedia(input, label);
+  const displayLabel = media.archive ? `${media.archive} → ${media.name}` : media.name;
+
+  if (media.type === "tap" || media.type === "tzx") {
+    clearRzxPlayback();
+    mountTapeBytes(media.bytes, displayLabel);
+    if (autoloadTape) autoloadMountedTape();
+    return media;
+  }
+  if (media.type === "sna" || media.type === "z80") {
+    loadSnapshotBytes(media.bytes, displayLabel, media.type);
+    return media;
+  }
+  if (media.type === "rzx") {
+    await loadRzxBytes(media.bytes, displayLabel);
+    return media;
+  }
+  throw new Error(`Unsupported Spectrum media type ${media.type}`);
+}
+
+async function loadSpectrumMediaFromUrl(rawUrl, { autoloadTape = false } = {}) {
+  const resolvedUrl = normalizeRemoteFileUrl(rawUrl, window.location.href, "Media");
+  statusOutput.value = "Fetching media from " + resolvedUrl;
   const response = await fetch(resolvedUrl, { mode: "cors" });
-  if (!response.ok) throw new Error("Snapshot fetch failed: HTTP " + response.status);
-  loadSnapshotBytes(await response.arrayBuffer(), resolvedUrl);
+  if (!response.ok) throw new Error("Media fetch failed: HTTP " + response.status);
+  await loadSpectrumMediaBytes(await response.arrayBuffer(), response.url || resolvedUrl, { autoloadTape });
   return resolvedUrl;
 }
 
@@ -481,7 +510,7 @@ function renderTapList() {
   );
 
   if (currentTapEntries.length === 0) {
-    tapList.textContent = "No loadable header blocks found";
+    tapList.textContent = currentTapBlocks.length > 0 ? "No loadable header blocks found" : "";
   }
 }
 
@@ -930,45 +959,45 @@ debugWorkbenchDetails?.addEventListener("toggle", () => {
   if (debugWorkbenchDetails.open && advancedToolsDetails?.open && machine) updateDebugger();
 });
 
-tapUrlLoadButton.addEventListener("click", async () => {
-  const rawUrl = tapUrlInput.value.trim();
-  if (!rawUrl) {
-    statusOutput.value = "Tape URL is empty";
-    tapUrlInput.focus();
-    return;
-  }
-
-  tapUrlLoadButton.disabled = true;
-  try {
-    await loadTapeFromUrl(rawUrl, { autoload: tapUrlAutoloadInput.checked });
-  } catch (error) {
-    statusOutput.value = error.message + (/fetch failed|Failed to fetch/i.test(error.message) ? " (the remote server may block browser access)" : "");
-  } finally {
-    tapUrlLoadButton.disabled = false;
-  }
-});
-
-tapUrlInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    tapUrlLoadButton.click();
-  }
-});
-
-tapFileInput.addEventListener("change", async () => {
-  const file = tapFileInput.files?.[0];
+mediaFileInput.addEventListener("change", async () => {
+  const file = mediaFileInput.files?.[0];
   if (!file) return;
 
   try {
-    mountTapeBytes(await file.arrayBuffer(), file.name);
+    await loadSpectrumMediaBytes(await file.arrayBuffer(), file.name, {
+      autoloadTape: mediaAutoloadTapeInput.checked
+    });
   } catch (error) {
-    currentTapBlocks = [];
-    machine.clearTape();
-    currentTapEntries = [];
-    selectedTapEntryIndex = -1;
-    tapLoadButton.disabled = true;
-    renderTapList();
     statusOutput.value = error.message;
+  } finally {
+    mediaFileInput.value = "";
+  }
+});
+
+mediaUrlLoadButton.addEventListener("click", async () => {
+  const rawUrl = mediaUrlInput.value.trim();
+  if (!rawUrl) {
+    statusOutput.value = "Media URL is empty";
+    mediaUrlInput.focus();
+    return;
+  }
+
+  mediaUrlLoadButton.disabled = true;
+  try {
+    await loadSpectrumMediaFromUrl(rawUrl, { autoloadTape: mediaAutoloadTapeInput.checked });
+  } catch (error) {
+    statusOutput.value = error.message + (/fetch failed|Failed to fetch/i.test(error.message)
+      ? " (the remote server may block browser access)"
+      : "");
+  } finally {
+    mediaUrlLoadButton.disabled = false;
+  }
+});
+
+mediaUrlInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    mediaUrlLoadButton.click();
   }
 });
 
@@ -991,84 +1020,10 @@ tapLoadButton.addEventListener("click", () => {
   }
 });
 
-snapshotFileInput.addEventListener("change", async () => {
-  const file = snapshotFileInput.files?.[0];
-  if (!file) return;
-
-  try {
-    loadSnapshotBytes(await file.arrayBuffer(), file.name);
-  } catch (error) {
-    statusOutput.value = error.message;
-  } finally {
-    snapshotFileInput.value = "";
-  }
-});
-
-snapshotUrlLoadButton.addEventListener("click", async () => {
-  const rawUrl = snapshotUrlInput.value.trim();
-  if (!rawUrl) {
-    statusOutput.value = "Snapshot URL is empty";
-    snapshotUrlInput.focus();
-    return;
-  }
-
-  snapshotUrlLoadButton.disabled = true;
-  try {
-    await loadSnapshotFromUrl(rawUrl);
-  } catch (error) {
-    statusOutput.value = error.message + (/fetch failed|Failed to fetch/i.test(error.message) ? " (the remote server may block browser access)" : "");
-  } finally {
-    snapshotUrlLoadButton.disabled = false;
-  }
-});
-
-snapshotUrlInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    snapshotUrlLoadButton.click();
-  }
-});
-
 snapshotSaveButton.addEventListener("click", () => {
   const bytes = createZ80Snapshot(machine);
   downloadBytes(bytes, "zx-spectrum-state.z80");
   statusOutput.value = "Saved current machine state as a Z80 snapshot";
-});
-
-rzxFileInput.addEventListener("change", async () => {
-  const files = Array.from(rzxFileInput.files ?? []);
-  const file = files.find((candidate) => candidate.name.toLowerCase().endsWith(".rzx"));
-  if (!file) return;
-
-  try {
-    const snapshots = new Map(files
-      .filter((candidate) => candidate !== file)
-      .map((candidate) => [candidate.name.toLowerCase(), candidate]));
-    const recording = await parseRzx(await file.arrayBuffer(), {
-      resolveExternalSnapshot: async ({ filename }) => {
-        const exact = snapshots.get(filename.toLowerCase());
-        const basename = filename.split(/[\\/]/).pop()?.toLowerCase();
-        const match = exact ?? snapshots.get(basename);
-        return match ? match.arrayBuffer() : null;
-      }
-    });
-    rzxPlayback = new RzxPlayback(machine, recording);
-    rzxPlaying = false;
-    running = false;
-    runPauseButton.textContent = "Run";
-    runPauseButton.setAttribute("aria-label", "Run");
-    clearExecutionHistory();
-    rzxStepButton.disabled = false;
-    rzxPlayPauseButton.disabled = false;
-    rzxPlayPauseButton.textContent = "Play RZX";
-    rzxStatusOutput.value = `0/${recording.frameCount} frames · ${recording.creator}`;
-    statusOutput.value = `Loaded RZX ${file.name}`;
-  } catch (error) {
-    clearRzxPlayback();
-    statusOutput.value = error.message;
-  } finally {
-    rzxFileInput.value = "";
-  }
 });
 
 rzxStepButton.addEventListener("click", () => {
