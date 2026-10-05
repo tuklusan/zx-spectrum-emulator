@@ -20,7 +20,7 @@ import {
 } from "./keyboard.js?v=20261005-play-first";
 import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
-import { loadTapEntry, parseTapeFile, tapEntries } from "./tape.js?v=20261004-tzx-url";
+import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
 import { unwrapSpectrumMedia } from "./media.js?v=20261005-unified-media";
 import { normalizeRemoteFileUrl, normalizeTapeUrl } from "./tape-url.js?v=20261005-zxinfo-mirror";
 
@@ -60,9 +60,7 @@ const mediaFileInput = document.querySelector("#mediaFile");
 const mediaUrlInput = document.querySelector("#mediaUrl");
 const mediaUrlLoadButton = document.querySelector("#mediaUrlLoad");
 const mediaStatusOutput = document.querySelector("#mediaStatus");
-const mediaAutoloadTapeInput = document.querySelector("#mediaAutoloadTape");
-const tapList = document.querySelector("#tapList");
-const tapLoadButton = document.querySelector("#tapLoad");
+const mediaFileLabelOutput = document.querySelector("#mediaFileLabel");
 const snapshotSaveButton = document.querySelector("#snapshotSave");
 const rzxStepButton = document.querySelector("#rzxStep");
 const rzxPlayPauseButton = document.querySelector("#rzxPlayPause");
@@ -97,8 +95,6 @@ const activeChords = new Map();
 let lastModernKey = "-";
 let lastMappedKeys = [];
 let currentTapBlocks = [];
-let currentTapEntries = [];
-let selectedTapEntryIndex = -1;
 const executionHistory = new MachineHistory({ limit: 6000, byteLimit: 64 * 1024 * 1024 });
 let rzxPlayback;
 let rzxPlaying = false;
@@ -353,14 +349,31 @@ function typeCommand(text) {
   return taps.length;
 }
 
+function shortMediaName(value) {
+  const label = String(value ?? "media");
+  try {
+    const pathname = new URL(label, window.location.href).pathname;
+    const name = pathname.split("/").pop();
+    return name ? decodeURIComponent(name) : label;
+  } catch {
+    return label.split(/[\\/]/).pop() || label;
+  }
+}
+
+function displayMediaName(media) {
+  const name = shortMediaName(media.name);
+  return media.archive ? `${shortMediaName(media.archive)} → ${name}` : name;
+}
+
+function setLoadedMediaLabel(label) {
+  mediaFileLabelOutput.textContent = label || "No media loaded";
+}
+
 function mountTapeBytes(input, label = "tape") {
   const blocks = parseTapeFile(input);
   currentTapBlocks = blocks;
   machine.setTapeBlocks(blocks);
-  currentTapEntries = tapEntries(blocks);
-  selectedTapEntryIndex = currentTapEntries.findIndex((entry) => entry.loadable);
-  tapLoadButton.disabled = selectedTapEntryIndex === -1;
-  renderTapList();
+  setLoadedMediaLabel(label);
   statusOutput.value = "Mounted " + blocks.length + " tape block" + (blocks.length === 1 ? "" : "s") + " from " + label;
   return blocks;
 }
@@ -377,21 +390,6 @@ function autoloadMountedTape() {
   machine.startTapePlayback({ startIndex: 0, initialPauseMs: 0 });
   tapSpectrumKeys(["ENTER"], 2, 2);
   statusOutput.value = 'Autoload started with LOAD ""';
-}
-
-async function loadTapeFromUrl(rawUrl, { autoload = false } = {}) {
-  const resolvedUrl = normalizeTapeUrl(rawUrl, window.location.href);
-  statusOutput.value = "Fetching tape from " + resolvedUrl;
-  const response = await fetch(resolvedUrl, { mode: "cors" });
-  if (!response.ok) throw new Error("Tape fetch failed: HTTP " + response.status);
-  const media = await unwrapSpectrumMedia(await response.arrayBuffer(), response.url || resolvedUrl);
-  if (media.type !== "tap" && media.type !== "tzx") {
-    throw new Error(`Tape URL contains ${media.type.toUpperCase()} media, not TAP/TZX`);
-  }
-  clearRzxPlayback();
-  mountTapeBytes(media.bytes, media.archive ? `${media.archive} → ${media.name}` : media.name);
-  if (autoload) autoloadMountedTape();
-  return resolvedUrl;
 }
 
 function audioIsRunning() {
@@ -442,14 +440,8 @@ async function loadTapeQueryParameters() {
   const params = new URLSearchParams(window.location.search);
   const tapeUrl = params.get("tape");
   if (!tapeUrl) return;
-  const autoload = /^(1|true|yes)$/i.test(params.get("autoload") ?? "");
 
-  if (!autoload) {
-    await loadTapeFromUrl(tapeUrl);
-    return;
-  }
-
-  await loadTapeFromUrl(tapeUrl);
+  await loadSpectrumMedia(tapeUrl, { requireTape: true, deferTapeAutoload: true });
   if (!prepareAutoloadAudio()) await waitForAutoloadAudioGesture();
   autoloadMountedTape();
 }
@@ -457,10 +449,6 @@ async function loadTapeQueryParameters() {
 function clearMountedTape() {
   currentTapBlocks = [];
   machine.clearTape();
-  currentTapEntries = [];
-  selectedTapEntryIndex = -1;
-  tapLoadButton.disabled = true;
-  renderTapList();
 }
 
 function loadSnapshotBytes(input, label, type) {
@@ -492,34 +480,47 @@ async function loadRzxBytes(input, label) {
   return recording;
 }
 
-async function loadSpectrumMediaBytes(input, label, { autoloadTape = false } = {}) {
-  const media = await unwrapSpectrumMedia(input, label);
-  const displayLabel = media.archive ? `${media.archive} → ${media.name}` : media.name;
+async function loadSpectrumMedia(source, {
+  label = "media",
+  requireTape = false,
+  deferTapeAutoload = false
+} = {}) {
+  let input = source;
+  let sourceLabel = label;
+  let resolvedUrl = null;
+
+  if (typeof source === "string") {
+    resolvedUrl = normalizeRemoteFileUrl(source, window.location.href, "Media");
+    statusOutput.value = "Fetching media from " + resolvedUrl;
+    const response = await fetch(resolvedUrl, { mode: "cors" });
+    if (!response.ok) throw new Error("Media fetch failed: HTTP " + response.status);
+    input = await response.arrayBuffer();
+    sourceLabel = response.url || resolvedUrl;
+  }
+
+  const media = await unwrapSpectrumMedia(input, sourceLabel);
+  const displayLabel = displayMediaName(media);
+  if (requireTape && media.type !== "tap" && media.type !== "tzx") {
+    throw new Error(`Tape URL contains ${media.type.toUpperCase()} media, not TAP/TZX`);
+  }
 
   if (media.type === "tap" || media.type === "tzx") {
     clearRzxPlayback();
     mountTapeBytes(media.bytes, displayLabel);
-    if (autoloadTape) autoloadMountedTape();
-    return media;
+    if (!deferTapeAutoload) autoloadMountedTape();
+    return { media, resolvedUrl };
   }
   if (media.type === "sna" || media.type === "z80") {
     loadSnapshotBytes(media.bytes, displayLabel, media.type);
-    return media;
+    setLoadedMediaLabel(displayLabel);
+    return { media, resolvedUrl };
   }
   if (media.type === "rzx") {
     await loadRzxBytes(media.bytes, displayLabel);
-    return media;
+    setLoadedMediaLabel(displayLabel);
+    return { media, resolvedUrl };
   }
   throw new Error(`Unsupported Spectrum media type ${media.type}`);
-}
-
-async function loadSpectrumMediaFromUrl(rawUrl, { autoloadTape = false } = {}) {
-  const resolvedUrl = normalizeRemoteFileUrl(rawUrl, window.location.href, "Media");
-  statusOutput.value = "Fetching media from " + resolvedUrl;
-  const response = await fetch(resolvedUrl, { mode: "cors" });
-  if (!response.ok) throw new Error("Media fetch failed: HTTP " + response.status);
-  await loadSpectrumMediaBytes(await response.arrayBuffer(), response.url || resolvedUrl, { autoloadTape });
-  return resolvedUrl;
 }
 
 function clearMediaError() {
@@ -561,35 +562,6 @@ function selectToolPanel(name) {
     const selected = panel.dataset.toolPanel === name;
     panel.hidden = !selected;
     panel.classList.toggle("active", selected);
-  }
-}
-
-function renderTapList() {
-  tapList.replaceChildren(
-    ...currentTapEntries.map((entry, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = index === selectedTapEntryIndex ? "tap-entry selected" : "tap-entry";
-      button.disabled = !entry.loadable;
-      const checksum = entry.headerBlock.checksumValid && entry.dataBlock?.checksumValid ? "OK" : "Bad";
-      const name = document.createElement("span");
-      name.textContent = entry.header.name || "(unnamed)";
-      const type = document.createElement("strong");
-      type.textContent = entry.header.typeName;
-      const details = document.createElement("small");
-      details.textContent = `${entry.header.length} bytes · checksum ${checksum}`;
-      button.append(name, type, details);
-      button.addEventListener("click", () => {
-        selectedTapEntryIndex = index;
-        tapLoadButton.disabled = !entry.loadable;
-        renderTapList();
-      });
-      return button;
-    })
-  );
-
-  if (currentTapEntries.length === 0) {
-    tapList.textContent = currentTapBlocks.length > 0 ? "No loadable header blocks found" : "";
   }
 }
 
@@ -1060,19 +1032,19 @@ debugWorkbenchDetails?.addEventListener("toggle", () => {
   if (debugWorkbenchDetails.open && advancedToolsDetails?.open && machine) updateDebugger();
 });
 
+mediaFileInput.addEventListener("click", () => {
+  mediaFileInput.value = "";
+});
+
 mediaFileInput.addEventListener("change", async () => {
   const file = mediaFileInput.files?.[0];
   if (!file) return;
 
   clearMediaError();
   try {
-    await loadSpectrumMediaBytes(await file.arrayBuffer(), file.name, {
-      autoloadTape: mediaAutoloadTapeInput.checked
-    });
+    await loadSpectrumMedia(await file.arrayBuffer(), { label: file.name });
   } catch (error) {
     showMediaError(error);
-  } finally {
-    mediaFileInput.value = "";
   }
 });
 
@@ -1087,7 +1059,7 @@ mediaUrlLoadButton.addEventListener("click", async () => {
 
   mediaUrlLoadButton.disabled = true;
   try {
-    await loadSpectrumMediaFromUrl(rawUrl, { autoloadTape: mediaAutoloadTapeInput.checked });
+    await loadSpectrumMedia(rawUrl);
   } catch (error) {
     showMediaError(error);
   } finally {
@@ -1099,25 +1071,6 @@ mediaUrlInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     mediaUrlLoadButton.click();
-  }
-});
-
-tapLoadButton.addEventListener("click", () => {
-  const entry = currentTapEntries[selectedTapEntryIndex];
-  if (!entry) return;
-
-  try {
-    const result = loadTapEntry(machine, entry);
-    machine.setTapeCursor((entry.dataBlock?.index ?? entry.headerBlock.index) + 1);
-    let typedKeys = 0;
-    if (result.kind === "BASIC" && result.autoStartLine !== null) {
-      typedKeys = typeCommand(`RUN ${result.autoStartLine}`);
-    }
-    statusOutput.value = result.kind === "BASIC"
-      ? `Loaded TAP BASIC ${result.name || "(unnamed)"}${typedKeys ? `, typed ${typedKeys} keys` : ""}`
-      : `Loaded TAP CODE ${result.name || "(unnamed)"} at ${hexWord(result.start)}`;
-  } catch (error) {
-    statusOutput.value = error.message;
   }
 });
 

@@ -148,7 +148,10 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(index, /id="mediaFile"/);
   assert.match(index, /id="mediaUrlLoad"/);
   assert.match(index, /id="mediaStatus" class="media-status" role="alert" aria-live="assertive" hidden/);
-  assert.match(index, /id="mediaAutoloadTape"/);
+  assert.match(index, /id="mediaFileLabel"/);
+  assert.doesNotMatch(index, /id="mediaAutoloadTape"/);
+  assert.doesNotMatch(index, /id="tapList"/);
+  assert.doesNotMatch(index, /id="tapLoad"/);
   assert.doesNotMatch(index, /id="tapFile"/);
   assert.doesNotMatch(index, /id="snapshotFile"/);
 
@@ -167,9 +170,12 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /parseRzx\(input\)/);
   assert.match(app, /new RzxPlayback\(machine, recording\)/);
   assert.match(app, /unwrapSpectrumMedia/);
-  assert.match(app, /loadSpectrumMediaBytes/);
-  assert.match(app, /loadSpectrumMediaFromUrl/);
-  assert.match(app, /mediaAutoloadTapeInput\.checked/);
+  assert.match(app, /async function loadSpectrumMedia\(/);
+  assert.doesNotMatch(app, /loadSpectrumMediaBytes/);
+  assert.doesNotMatch(app, /loadSpectrumMediaFromUrl/);
+  assert.doesNotMatch(app, /mediaAutoloadTapeInput/);
+  assert.doesNotMatch(app, /tapEntries/);
+  assert.doesNotMatch(app, /loadTapEntry/);
   assert.match(app, /function prepareAutoloadAudio/);
   assert.match(app, /function waitForAutoloadAudioGesture/);
   assert.match(app, /if \(!prepareAutoloadAudio\(\)\) await waitForAutoloadAudioGesture\(\)/);
