@@ -385,6 +385,19 @@ function mountTapeBytes(input, label = "tape") {
   return blocks;
 }
 
+function enterRomTapeLoad() {
+  machine.pressKey("ENTER");
+  const deadline = machine.cpu.tStates + (Spectrum48.T_STATES_PER_FRAME * 6);
+  while (machine.cpu.PC !== 0x0556 && machine.cpu.tStates < deadline) {
+    machine.step();
+  }
+  machine.releaseKey("ENTER");
+  machine.drainBeeperEvents();
+  if (machine.cpu.PC !== 0x0556) {
+    throw new Error("Spectrum ROM did not enter the tape loader");
+  }
+}
+
 function autoloadMountedTape() {
   resetMachine();
   running = true;
@@ -394,7 +407,7 @@ function autoloadMountedTape() {
   const taps = basicTextToSpectrumKeyTaps('LOAD ""');
   for (const keys of taps) tapSpectrumKeys(keys);
   machine.setTapeCursor(0);
-  tapSpectrumKeys(["ENTER"], 2, 2);
+  enterRomTapeLoad();
   machine.startTapePlayback({ startIndex: 0, initialPauseMs: 0 });
   audio?.reset(machine.cpu.tStates);
   statusOutput.value = 'Autoload started with LOAD ""';
