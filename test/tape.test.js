@@ -263,7 +263,7 @@ test("plays TZX turbo blocks using their recorded timings", () => {
   const raw = dataBlock([0x80]).slice(2);
   const blocks = parseTzx(makeTzx([turboTzxBlock(raw, {pilotPulse:1000,sync1:200,sync2:300,zero:400,one:800,pilotCount:2})]));
   const machine = makeMachine(); machine.setTapeBlocks(blocks);
-  const sequence = machine.buildTapePulseSequence(0, 0);
+  const sequence = machine.buildTapeBlockPulseSequence(0, 0);
   assert.deepEqual(Array.from(sequence.durations.slice(0, 4)), [1000,1000,200,300]);
   assert.equal(sequence.durations[4], 800);
   assert.equal(sequence.durations[5], 800);
@@ -272,7 +272,7 @@ test("plays TZX turbo blocks using their recorded timings", () => {
 test("parses and expands generalized TZX fast-loader data", () => {
   const blocks = parseTzx(makeTzx([generalizedFastTzxBlock([0x80])]));
   const machine = makeMachine(); machine.setTapeBlocks(blocks);
-  const sequence = machine.buildTapePulseSequence(0, 0);
+  const sequence = machine.buildTapeBlockPulseSequence(0, 0);
   assert.equal(blocks[0].type, "generalized");
   assert.equal(blocks[0].generalized.pilotStream[0].repetitions, 128);
   assert.equal(blocks[0].generalized.dataSymbolCount, 8);
