@@ -418,6 +418,17 @@ test("reset restarts CPU and frame state without clearing RAM", () => {
 
 
 
+test("mounted tape keeps the parsed blocks without copying them", () => {
+  const machine = new Spectrum48({ rom: new Uint8Array(0x4000) });
+  const payload = new Uint8Array([1, 2, 3]);
+  const blocks = [{ flag: 0xff, payload, checksum: 0xff, checksumValid: true, pauseMs: 0 }];
+
+  machine.setTapeBlocks(blocks);
+
+  assert.equal(machine.tapeBlocks, blocks);
+  assert.equal(machine.tapeBlocks[0].payload, payload);
+});
+
 test("tape playback materializes only the current block", () => {
   const machine = new Spectrum48({ rom: new Uint8Array(0x4000) });
   const block = {
