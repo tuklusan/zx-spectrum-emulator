@@ -202,9 +202,21 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(autoloadFunction, /initialPauseMs: SPECTRUM_FRAME_MS \* 4/);
   assert.ok(autoloadFunction.indexOf("startTapePlayback") < autoloadFunction.indexOf('tapSpectrumKeys(["ENTER"]'));
   assert.ok(autoloadFunction.indexOf("setTapeCursor(0)") < autoloadFunction.indexOf("startTapePlayback"));
-  assert.match(app, /if \(!prepareAutoloadAudio\(\)\) await waitForAutoloadAudioGesture\(request\.controller\.signal\)/);
+  const loadMediaFunction = app.slice(app.indexOf("async function loadSpectrumMedia"), app.indexOf("async function replaceSpectrumMedia"));
+  const mediaAudioGateIndex = loadMediaFunction.indexOf("waitForAutoloadAudioGesture");
+  assert.ok(mediaAudioGateIndex > 0);
+  for (const applyMarker of [
+    'media.type === "tap" || media.type === "tzx"',
+    'media.type === "sna" || media.type === "z80"',
+    'media.type === "rzx"'
+  ]) {
+    assert.ok(mediaAudioGateIndex < loadMediaFunction.indexOf(applyMarker), `sound gate must precede ${applyMarker}`);
+  }
+  assert.match(loadMediaFunction, /request\?\.controller\.signal/);
   assert.match(app, /audioStartGate\.hidden = false/);
   assert.match(app, /await audio\.resume\(\)/);
+  assert.match(app, /audioEnabled = true/);
+  assert.match(app, /audioToggleButton\.textContent = "Sound On"/);
   assert.match(app, /const SPECTRUM_FRAME_MS = 20/);
   assert.match(app, /context\.createImageData\(Spectrum48\.FRAME_WIDTH, Spectrum48\.FRAME_HEIGHT\)/);
   assert.match(app, /renderFrameRgba\(\{ flashOn, target: frameImageData\.data \}\)/);

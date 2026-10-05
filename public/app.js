@@ -456,6 +456,7 @@ function clearStartupMediaQuery() {
 
 function waitForAutoloadAudioGesture(signal) {
   audioStartGate.hidden = false;
+  audioStartGate.querySelector("small").textContent = "Your browser requires a tap before audio can start.";
   statusOutput.value = "Tap to start with sound";
 
   return new Promise((resolve, reject) => {
@@ -477,6 +478,9 @@ function waitForAutoloadAudioGesture(signal) {
         if (!audioIsRunning()) throw new Error("Audio is still blocked");
         if (signal?.aborted) throw mediaAbortError();
         audio.reset(machine.cpu.tStates);
+        audioEnabled = true;
+        audioToggleButton.textContent = "Sound On";
+        audioToggleButton.setAttribute("aria-pressed", "true");
         audioStartGate.hidden = true;
         audioStartGate.disabled = false;
         cleanup();
@@ -510,7 +514,6 @@ async function loadTapeQueryParameters() {
       deferTapeAutoload: true,
       request
     });
-    if (!prepareAutoloadAudio()) await waitForAutoloadAudioGesture(request.controller.signal);
     assertCurrentMediaRequest(request);
     autoloadMountedTape();
   } finally {
@@ -584,6 +587,13 @@ async function loadSpectrumMedia(source, {
   if (requireTape && media.type !== "tap" && media.type !== "tzx") {
     throw new Error(`Tape URL contains ${media.type.toUpperCase()} media, not TAP/TZX`);
   }
+
+  // Do not reset or replace the current machine until sound is actually usable.
+  // Mobile browsers in particular insist on a real tap here.
+  if (!prepareAutoloadAudio()) {
+    await waitForAutoloadAudioGesture(request?.controller.signal);
+  }
+  if (request) assertCurrentMediaRequest(request);
 
   if (media.type === "tap" || media.type === "tzx") {
     if (request) assertCurrentMediaRequest(request);
