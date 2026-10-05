@@ -159,6 +159,36 @@ test("detects TZX files through the generic tape parser", () => {
   assert.equal(blocks[0].pauseMs, 500);
 });
 
+test("preserves TZX pause and stop-tape control blocks", () => {
+  const blocks = parseTzx(makeTzx([
+    [0x20, 0xfa, 0x00],
+    [0x20, 0x00, 0x00],
+    standardTzxBlock(dataBlock([0x01]).slice(2), 0)
+  ]));
+
+  assert.equal(blocks.length, 3);
+  assert.equal(blocks[0].type, "pause");
+  assert.equal(blocks[0].pauseMs, 250);
+  assert.equal(blocks[0].stopTape, false);
+  assert.equal(blocks[1].type, "pause");
+  assert.equal(blocks[1].stopTape, true);
+});
+
+test("TZX stop-tape blocks halt playback and leave the cursor ready to resume", () => {
+  const blocks = parseTzx(makeTzx([
+    [0x20, 0x00, 0x00],
+    standardTzxBlock(dataBlock([0x01]).slice(2), 0)
+  ]));
+  const machine = makeMachine();
+  machine.setTapeBlocks(blocks);
+  machine.startTapePlayback();
+
+  assert.equal(machine.tapePlaying, false);
+  assert.equal(machine.tapeCursor, 1);
+  machine.startTapePlaybackFromCursor();
+  assert.equal(machine.tapePlaying, true);
+});
+
 test("feeds mounted TAP blocks to the ROM tape load routine", () => {
   const header = headerBlock({ type: 3, name: "CODE", length: 3, param1: 0x8000, param2: 0x8000 });
   const blocks = parseTap(makeTap([header]));

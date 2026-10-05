@@ -209,6 +209,11 @@ export class Spectrum48 {
   loadTapeBlockPulseSequence(initialPauseMs = 0, startTState = this.cpu.tStates) {
     let pauseMs = initialPauseMs;
     while (this.tapeCursor < this.tapeBlocks.length) {
+      if (this.tapeBlocks[this.tapeCursor]?.stopTape) {
+        this.tapeCursor += 1;
+        this.stopTapePlayback();
+        return false;
+      }
       const sequenceInitialLevel = this.tapeEarLevel;
       const sequenceInitialPauseMs = pauseMs;
       const sequence = this.buildTapeBlockPulseSequence(this.tapeCursor, sequenceInitialPauseMs, sequenceInitialLevel);

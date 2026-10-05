@@ -210,7 +210,25 @@ export function parseTzx(input) {
     }
 
     if (id === 0x20) {
-      requireBytes(bytes, offset, 2, "Truncated TZX pause block"); offset += 2;
+      requireBytes(bytes, offset, 2, "Truncated TZX pause block");
+      const pauseMs = wordAt(bytes, offset);
+      blocks.push({
+        index: blocks.length,
+        source: "TZX",
+        type: "pause",
+        length: 2,
+        pauseMs,
+        flag: null,
+        payload: new Uint8Array(),
+        checksum: null,
+        checksumValid: true,
+        header: null,
+        timing: null,
+        generalized: null,
+        fastLoadable: false,
+        stopTape: pauseMs === 0
+      });
+      offset += 2;
     } else if (id === 0x21 || id === 0x30) {
       requireBytes(bytes, offset, 1, "Truncated TZX text block");
       const length = bytes[offset];
