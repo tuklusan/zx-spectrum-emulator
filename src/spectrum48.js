@@ -108,11 +108,16 @@ export class Spectrum48 {
     });
   }
 
+  peek8(address) {
+    const mappedAddress = address & 0xffff;
+    if (mappedAddress < 0x4000) return this.rom[mappedAddress];
+    return this.ram[mappedAddress - 0x4000];
+  }
+
   read8(address) {
     const mappedAddress = address & 0xffff;
     this.trackMemoryAccess(mappedAddress);
-    if (mappedAddress < 0x4000) return this.rom[mappedAddress];
-    return this.ram[mappedAddress - 0x4000];
+    return this.peek8(mappedAddress);
   }
 
   write8(address, value) {
@@ -446,8 +451,8 @@ export class Spectrum48 {
     if (raster.displayColumn < 0 || raster.displayColumn >= 128) return 0xff;
     const xByte = Math.floor(raster.displayColumn / 4);
     const phase = raster.displayColumn & 0x03;
-    if (phase < 2) return this.read8(this.screenByteAddress(xByte, raster.displayLine));
-    return this.read8(0x5800 + ((raster.displayLine >> 3) * 32) + xByte);
+    if (phase < 2) return this.peek8(this.screenByteAddress(xByte, raster.displayLine));
+    return this.peek8(0x5800 + ((raster.displayLine >> 3) * 32) + xByte);
   }
 
   getRasterPositionAt(tState) {

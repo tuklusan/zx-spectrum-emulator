@@ -324,6 +324,21 @@ test("exposes ULA bitmap and attribute fetches on the floating bus", () => {
   assert.equal(machine.readFloatingBus(0), 0xff);
 });
 
+test("floating-bus ULA reads do not count as CPU memory accesses", () => {
+  const machine = new Spectrum48({ rom: makeRom() });
+  machine.write8(0x4000, 0xa5);
+  const active = (Spectrum48.DISPLAY_FIRST_LINE * Spectrum48.T_STATES_PER_LINE)
+    + Spectrum48.DISPLAY_FIRST_COLUMN;
+  machine.cpuExecuting = true;
+  machine.busTState = active;
+  machine.pendingContention = 0;
+  machine.busAccessCount = 0;
+
+  assert.equal(machine.readFloatingBus(active), 0xa5);
+  assert.equal(machine.pendingContention, 0);
+  assert.equal(machine.busAccessCount, 0);
+});
+
 test("renders display bytes and attributes to an RGBA buffer", () => {
   const machine = new Spectrum48({ rom: makeRom() });
   machine.write8(0x4000, 0x80);
