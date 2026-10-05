@@ -21,7 +21,7 @@ import {
 import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { loadTapEntry, parseTapeFile, tapEntries } from "./tape.js?v=20261004-tzx-url";
-import { normalizeTapeUrl } from "./tape-url.js?v=20261004-tzx-url";
+import { normalizeRemoteFileUrl, normalizeTapeUrl } from "./tape-url.js?v=20261005-url-loaders";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
@@ -55,9 +55,14 @@ const pasteTextInput = document.querySelector("#pasteText");
 const basicFileInput = document.querySelector("#basicFile");
 const basicExportButton = document.querySelector("#basicExport");
 const tapFileInput = document.querySelector("#tapFile");
+const tapUrlInput = document.querySelector("#tapUrl");
+const tapUrlLoadButton = document.querySelector("#tapUrlLoad");
+const tapUrlAutoloadInput = document.querySelector("#tapUrlAutoload");
 const tapList = document.querySelector("#tapList");
 const tapLoadButton = document.querySelector("#tapLoad");
 const snapshotFileInput = document.querySelector("#snapshotFile");
+const snapshotUrlInput = document.querySelector("#snapshotUrl");
+const snapshotUrlLoadButton = document.querySelector("#snapshotUrlLoad");
 const snapshotSaveButton = document.querySelector("#snapshotSave");
 const rzxFileInput = document.querySelector("#rzxFile");
 const rzxStepButton = document.querySelector("#rzxStep");
@@ -385,6 +390,47 @@ async function loadTapeQueryParameters() {
   if (!tapeUrl) return;
   const autoload = /^(1|true|yes)$/i.test(params.get("autoload") ?? "");
   await loadTapeFromUrl(tapeUrl, { autoload });
+}
+
+function snapshotExtensionFromLabel(label) {
+  let pathname;
+  try {
+    pathname = new URL(label, window.location.href).pathname;
+  } catch {
+    pathname = String(label ?? "");
+  }
+  const extension = pathname.split(".").pop()?.toLowerCase() ?? "";
+  if (extension !== "sna" && extension !== "z80") {
+    throw new Error("Snapshot URL must end in .sna or .z80");
+  }
+  return extension;
+}
+
+function loadSnapshotBytes(input, label) {
+  const extension = snapshotExtensionFromLabel(label);
+  const snapshot = applySpectrumSnapshot(machine, input, extension);
+  currentTapBlocks = [];
+  machine.clearTape();
+  currentTapEntries = [];
+  selectedTapEntryIndex = -1;
+  tapLoadButton.disabled = true;
+  renderTapList();
+  audio?.reset(machine.cpu.tStates);
+  clearExecutionHistory();
+  clearRzxPlayback();
+  statusOutput.value = `Loaded ${snapshot.format} snapshot ${label}`;
+  refreshDebugDisplay();
+  return snapshot;
+}
+
+async function loadSnapshotFromUrl(rawUrl) {
+  const resolvedUrl = normalizeRemoteFileUrl(rawUrl, window.location.href, "Snapshot");
+  snapshotExtensionFromLabel(resolvedUrl);
+  statusOutput.value = "Fetching snapshot from " + resolvedUrl;
+  const response = await fetch(resolvedUrl, { mode: "cors" });
+  if (!response.ok) throw new Error("Snapshot fetch failed: HTTP " + response.status);
+  loadSnapshotBytes(await response.arrayBuffer(), resolvedUrl);
+  return resolvedUrl;
 }
 
 function downloadBytes(bytes, filename, type = "application/octet-stream") {
@@ -884,6 +930,31 @@ debugWorkbenchDetails?.addEventListener("toggle", () => {
   if (debugWorkbenchDetails.open && advancedToolsDetails?.open && machine) updateDebugger();
 });
 
+tapUrlLoadButton.addEventListener("click", async () => {
+  const rawUrl = tapUrlInput.value.trim();
+  if (!rawUrl) {
+    statusOutput.value = "Tape URL is empty";
+    tapUrlInput.focus();
+    return;
+  }
+
+  tapUrlLoadButton.disabled = true;
+  try {
+    await loadTapeFromUrl(rawUrl, { autoload: tapUrlAutoloadInput.checked });
+  } catch (error) {
+    statusOutput.value = error.message + (/fetch failed|Failed to fetch/i.test(error.message) ? " (the remote server may block browser access)" : "");
+  } finally {
+    tapUrlLoadButton.disabled = false;
+  }
+});
+
+tapUrlInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    tapUrlLoadButton.click();
+  }
+});
+
 tapFileInput.addEventListener("change", async () => {
   const file = tapFileInput.files?.[0];
   if (!file) return;
@@ -925,22 +996,36 @@ snapshotFileInput.addEventListener("change", async () => {
   if (!file) return;
 
   try {
-    const extension = file.name.split(".").pop() || "";
-    const snapshot = applySpectrumSnapshot(machine, await file.arrayBuffer(), extension);
-    currentTapBlocks = [];
-    currentTapEntries = [];
-    selectedTapEntryIndex = -1;
-    tapLoadButton.disabled = true;
-    renderTapList();
-    audio?.reset(machine.cpu.tStates);
-    clearExecutionHistory();
-    clearRzxPlayback();
-    statusOutput.value = `Loaded ${snapshot.format} snapshot ${file.name}`;
-    refreshDebugDisplay();
+    loadSnapshotBytes(await file.arrayBuffer(), file.name);
   } catch (error) {
     statusOutput.value = error.message;
   } finally {
     snapshotFileInput.value = "";
+  }
+});
+
+snapshotUrlLoadButton.addEventListener("click", async () => {
+  const rawUrl = snapshotUrlInput.value.trim();
+  if (!rawUrl) {
+    statusOutput.value = "Snapshot URL is empty";
+    snapshotUrlInput.focus();
+    return;
+  }
+
+  snapshotUrlLoadButton.disabled = true;
+  try {
+    await loadSnapshotFromUrl(rawUrl);
+  } catch (error) {
+    statusOutput.value = error.message + (/fetch failed|Failed to fetch/i.test(error.message) ? " (the remote server may block browser access)" : "");
+  } finally {
+    snapshotUrlLoadButton.disabled = false;
+  }
+});
+
+snapshotUrlInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    snapshotUrlLoadButton.click();
   }
 });
 

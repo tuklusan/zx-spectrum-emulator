@@ -42,7 +42,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-play-first"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-url-loaders"/);
   assert.match(spectrum, /id="audioToggle"[^>]*aria-pressed="true"[^>]*>Sound On<\/button>/);
   assert.match(spectrum, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/index\.html">Machines</);
@@ -91,14 +91,18 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   const screenIndex = index.indexOf('id="screen"');
   const keyboardIndex = index.indexOf('id="spectrumKeyboard"');
   const tapeIndex = index.indexOf('id="tapFile"');
+  const tapeUrlIndex = index.indexOf('id="tapUrl"');
   const snapshotIndex = index.indexOf('id="snapshotFile"');
+  const snapshotUrlIndex = index.indexOf('id="snapshotUrl"');
   const advancedIndex = index.indexOf('id="advancedTools"');
 
   assert.ok(screenIndex >= 0);
   assert.ok(keyboardIndex > screenIndex);
   assert.ok(tapeIndex > keyboardIndex);
+  assert.ok(tapeUrlIndex > tapeIndex);
   assert.ok(snapshotIndex > keyboardIndex);
-  assert.ok(advancedIndex > snapshotIndex);
+  assert.ok(snapshotUrlIndex > snapshotIndex);
+  assert.ok(advancedIndex > snapshotUrlIndex);
   assert.equal((index.match(/data-spectrum-key="/g) ?? []).length, 40);
   assert.match(index, /data-spectrum-key="CAPS SHIFT"/);
   assert.match(index, /data-spectrum-key="SYMBOL SHIFT"/);
@@ -122,6 +126,9 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(index, /id="sourceFile"/);
   assert.match(index, /id="sourceListing"/);
   assert.match(index, /id="assemblerSearch"/);
+  assert.match(index, /id="tapUrlLoad"/);
+  assert.match(index, /id="tapUrlAutoload"/);
+  assert.match(index, /id="snapshotUrlLoad"/);
 
   assert.match(app, /softKeyboard\?\.querySelectorAll/);
   assert.match(app, /pointerdown/);
@@ -132,6 +139,9 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /executionHistory\.stepBack\(machine\)/);
   assert.match(app, /parseRzx\(await file\.arrayBuffer\(\),/);
   assert.match(app, /new RzxPlayback\(machine, recording\)/);
+  assert.match(app, /loadTapeFromUrl\(rawUrl, \{ autoload: tapUrlAutoloadInput\.checked \}\)/);
+  assert.match(app, /loadSnapshotFromUrl\(rawUrl\)/);
+  assert.match(app, /normalizeRemoteFileUrl\(rawUrl, window\.location\.href, "Snapshot"\)/);
 });
 
 test("machine selector exposes Spectrum, CP/M, TRS-80, and TI-85 routes", async () => {

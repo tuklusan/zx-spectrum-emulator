@@ -1,8 +1,10 @@
-export function normalizeTapeUrl(value, baseUrl = globalThis.location?.href ?? "https://localhost/") {
+export function normalizeRemoteFileUrl(value, baseUrl = globalThis.location?.href ?? "https://localhost/", label = "File") {
   const input = String(value ?? "").trim();
-  if (!input) throw new Error("Tape URL is empty");
+  if (!input) throw new Error(label + " URL is empty");
   const url = new URL(input, baseUrl);
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Unsupported tape URL scheme: " + url.protocol);
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new Error("Unsupported " + label.toLowerCase() + " URL scheme: " + url.protocol);
+  }
   if (url.hostname.toLowerCase() === "github.com") {
     const parts = url.pathname.split("/").filter(Boolean);
     if (parts.length >= 5 && parts[2] === "blob") {
@@ -10,4 +12,8 @@ export function normalizeTapeUrl(value, baseUrl = globalThis.location?.href ?? "
     }
   }
   return url.href;
+}
+
+export function normalizeTapeUrl(value, baseUrl = globalThis.location?.href ?? "https://localhost/") {
+  return normalizeRemoteFileUrl(value, baseUrl, "Tape");
 }
