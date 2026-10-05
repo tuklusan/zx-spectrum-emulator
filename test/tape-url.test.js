@@ -62,7 +62,7 @@ test("builds an AllOrigins raw fallback without changing the target URL", () => 
   const proxied = new URL(allOriginsRawUrl(target));
   assert.equal(proxied.origin, "https://api.allorigins.win");
   assert.equal(proxied.pathname, "/raw");
-  assert.equal(proxied.searchParams.get("url"), target);
+  assert.equal(proxied.searchParams.get("url"), new URL(target).href);
 });
 
 test("rejects non-web URLs for the CORS bridge", () => {

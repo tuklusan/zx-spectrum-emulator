@@ -173,7 +173,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /async function loadSpectrumMedia\(/);
   assert.match(app, /function beginMediaRequest\(\)/);
   assert.match(app, /mediaRequestController\?\.abort\(\)/);
-  assert.match(app, /signal: request\?\.controller\.signal/);
+  assert.match(app, /fetchRemoteMedia\(resolvedUrl, request\?\.controller\.signal\)/);
   assert.match(app, /function clearStartupMediaQuery\(\)/);
   assert.match(app, /history\.replaceState\(history\.state, "", url\.href\)/);
   assert.match(app, /url\.searchParams\.delete\("tape"\)/);
