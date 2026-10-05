@@ -394,8 +394,9 @@ function autoloadMountedTape() {
   const taps = basicTextToSpectrumKeyTaps('LOAD ""');
   for (const keys of taps) tapSpectrumKeys(keys);
   machine.setTapeCursor(0);
-  machine.startTapePlayback({ startIndex: 0, initialPauseMs: 0 });
   tapSpectrumKeys(["ENTER"], 2, 2);
+  machine.startTapePlayback({ startIndex: 0, initialPauseMs: 0 });
+  audio?.reset(machine.cpu.tStates);
   statusOutput.value = 'Autoload started with LOAD ""';
 }
 

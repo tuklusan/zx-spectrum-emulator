@@ -188,6 +188,7 @@ test("feeds mounted TAP blocks to the ROM tape load routine", () => {
   const blocks = parseTap(makeTap([header]));
   const machine = makeMachine();
   machine.setTapeBlocks(blocks);
+  machine.startTapePlayback();
   machine.cpu.PC = 0x0556;
   machine.cpu.SP = 0x7000;
   machine.cpu.A = 0x00;
@@ -207,6 +208,24 @@ test("feeds mounted TAP blocks to the ROM tape load routine", () => {
     Array.from({ length: 17 }, (_, offset) => machine.read8(0x6000 + offset)),
     Array.from(blocks[0].payload)
   );
+});
+
+test("does not fast-load a mounted cassette while the tape is stopped", () => {
+  const header = headerBlock({ type: 3, name: "CODE", length: 3, param1: 0x8000, param2: 0x8000 });
+  const blocks = parseTap(makeTap([header]));
+  const machine = makeMachine();
+  machine.setTapeBlocks(blocks);
+  machine.cpu.PC = 0x0556;
+  machine.cpu.SP = 0x7000;
+  machine.cpu.A = 0x00;
+  machine.cpu.IX = 0x6000;
+  machine.cpu.DE = 17;
+  machine.write16(machine.cpu.SP, 0x1234);
+
+  machine.step();
+
+  assert.equal(machine.cpu.PC, 0x0557);
+  assert.equal(machine.tapeCursor, 0);
 });
 
 test("leaves the ROM tape routine alone when the next TAP block does not match", () => {
