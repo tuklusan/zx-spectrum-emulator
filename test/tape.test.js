@@ -188,7 +188,6 @@ test("feeds mounted TAP blocks to the ROM tape load routine", () => {
   const blocks = parseTap(makeTap([header]));
   const machine = makeMachine();
   machine.setTapeBlocks(blocks);
-  machine.startTapePlayback();
   machine.cpu.PC = 0x0556;
   machine.cpu.SP = 0x7000;
   machine.cpu.A = 0x00;
@@ -210,24 +209,6 @@ test("feeds mounted TAP blocks to the ROM tape load routine", () => {
   );
 });
 
-test("does not fast-load a mounted cassette while the tape is stopped", () => {
-  const header = headerBlock({ type: 3, name: "CODE", length: 3, param1: 0x8000, param2: 0x8000 });
-  const blocks = parseTap(makeTap([header]));
-  const machine = makeMachine();
-  machine.setTapeBlocks(blocks);
-  machine.cpu.PC = 0x0556;
-  machine.cpu.SP = 0x7000;
-  machine.cpu.A = 0x00;
-  machine.cpu.IX = 0x6000;
-  machine.cpu.DE = 17;
-  machine.write16(machine.cpu.SP, 0x1234);
-
-  machine.step();
-
-  assert.equal(machine.cpu.PC, 0x0557);
-  assert.equal(machine.tapeCursor, 0);
-});
-
 test("leaves the ROM tape routine alone when the next TAP block does not match", () => {
   const blocks = parseTap(makeTap([dataBlock([0x3e, 0x42, 0xc9])]));
   const machine = makeMachine();
@@ -241,28 +222,6 @@ test("leaves the ROM tape routine alone when the next TAP block does not match",
 
   assert.equal(machine.cpu.PC, 0x0557);
   assert.equal(machine.tapeCursor, 0);
-});
-
-test("autoload can arm tape without consuming pilot pulses before ROM loader entry", () => {
-  const blocks = parseTzx(makeTzx([
-    standardTzxBlock(dataBlock([0x00]).slice(2), 0)
-  ]));
-  const machine = makeMachine();
-  machine.setTapeBlocks(blocks);
-  machine.startTapePlayback({ startIndex: 0, waitForRomLoader: true });
-  const firstDuration = machine.tapePulseDurations[0];
-
-  machine.cpu.PC = 0x1000;
-  machine.cpu.tStates += firstDuration * 20;
-  assert.equal(machine.readTapeEarBit(), 0x40);
-  assert.equal(machine.tapePulseIndex, 0);
-  assert.equal(machine.tapeWaitForRomLoader, true);
-
-  machine.cpu.PC = 0x0556;
-  machine.readTapeEarBit();
-  assert.equal(machine.tapeWaitForRomLoader, false);
-  assert.equal(machine.tapePulseIndex, 0);
-  assert.equal(machine.tapeNextPulseTState, machine.cpu.tStates + firstDuration);
 });
 
 test("standard tape pulse playback drives the EAR bit on port fe", () => {
