@@ -174,6 +174,15 @@ test("preserves TZX pause and stop-tape control blocks", () => {
   assert.equal(blocks[1].stopTape, true);
 });
 
+test("TZX millisecond pauses use the 48K Spectrum clock", () => {
+  const blocks = parseTzx(makeTzx([[0x20, 0xe8, 0x03]]));
+  const machine = makeMachine();
+  machine.setTapeBlocks(blocks);
+  const sequence = machine.buildTapeBlockPulseSequence(0, 0);
+  assert.equal(sequence.durations.length, 1);
+  assert.equal(sequence.durations[0], 3_494_400);
+});
+
 test("TZX stop-tape blocks halt playback and leave the cursor ready to resume", () => {
   const blocks = parseTzx(makeTzx([
     [0x20, 0x00, 0x00],

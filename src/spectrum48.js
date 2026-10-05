@@ -40,7 +40,7 @@ const PALETTE = [
   ]
 ];
 
-const T_STATES_PER_MS = 3500;
+const T_STATES_PER_MS = 3_494.4;
 const PILOT_PULSE_T_STATES = 2168;
 const SYNC_PULSE_T_STATES = [667, 735];
 const ZERO_BIT_PULSE_T_STATES = 855;
