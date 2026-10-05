@@ -123,7 +123,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(index, /id="sourceListing"/);
   assert.match(index, /id="assemblerSearch"/);
 
-  assert.match(app, /softKeyboard\.querySelectorAll/);
+  assert.match(app, /softKeyboard\?\.querySelectorAll/);
   assert.match(app, /pointerdown/);
   assert.match(app, /latchedSoftModifiers/);
   assert.match(app, /advancedToolsDetails\?\.open/);
