@@ -28,7 +28,7 @@ for (const [name, html] of [["index.html", indexHtml], ["spectrum.html", spectru
   requireText(html, `<link rel="canonical" href="${canonical}">`, `${name} canonical`);
   requireText(html, "<h1>ZX Spectrum 48K Online Emulator</h1>", `${name} H1`);
   requireText(html, "JavaScript web emulator", `${name} JavaScript/browser copy`);
-  requireText(html, "standard-speed TZX", `${name} TZX accuracy qualifier`);
+  requireText(html, "timed TZX", `${name} TZX accuracy qualifier`);
   requireText(html, "SNA and Z80 snapshot support", `${name} snapshot copy`);
   requireText(html, "Browser Z80 debugger", `${name} debugger copy`);
   requireText(html, 'href="./machines.html">Machines</a>', `${name} Machines navigation`);
