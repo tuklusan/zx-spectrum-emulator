@@ -184,6 +184,12 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.doesNotMatch(app, /mediaAutoloadTapeInput/);
   assert.doesNotMatch(app, /tapEntries/);
   assert.doesNotMatch(app, /loadTapEntry/);
+  assert.match(app, /function resetMachine\(\)[\s\S]*?running = true/);
+  assert.match(app, /machine\.setTapeBlocks\(currentTapBlocks, \{ cursor: 0 \}\)/);
+  assert.match(app, /function clearInputState\(\)/);
+  assert.match(app, /activeChords\.clear\(\)/);
+  assert.match(app, /softPointers\.clear\(\)/);
+  assert.match(app, /latchedSoftModifiers\.clear\(\)/);
   assert.match(app, /function prepareAutoloadAudio/);
   assert.match(app, /function waitForAutoloadAudioGesture/);
   assert.match(app, /waitForAutoloadAudioGesture\(request\.controller\.signal\)/);

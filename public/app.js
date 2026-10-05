@@ -134,7 +134,12 @@ async function loadRom() {
 
 function resetMachine() {
   machine = new Spectrum48({ rom });
-  if (currentTapBlocks.length > 0) machine.setTapeBlocks(currentTapBlocks);
+  if (currentTapBlocks.length > 0) machine.setTapeBlocks(currentTapBlocks, { cursor: 0 });
+  running = true;
+  frameAccumulatorMs = 0;
+  runPauseButton.textContent = "Pause";
+  runPauseButton.setAttribute("aria-label", "Pause");
+  clearInputState();
   audio?.reset(machine.cpu.tStates);
   clearExecutionHistory();
   clearRzxPlayback();
@@ -882,6 +887,19 @@ function stepRzxFrame() {
 const SOFT_MODIFIERS = new Set(["CAPS SHIFT", "SYMBOL SHIFT"]);
 const softPointers = new Map();
 const latchedSoftModifiers = new Set();
+
+function clearInputState() {
+  activeChords.clear();
+  physicalShiftDown = false;
+  softPointers.clear();
+  latchedSoftModifiers.clear();
+  lastModernKey = "-";
+  lastMappedKeys = [];
+  for (const button of softKeyboard?.querySelectorAll("[data-spectrum-key]") ?? []) {
+    button.classList.remove("is-pressed", "is-latched");
+    if (button.classList.contains("modifier")) button.setAttribute("aria-pressed", "false");
+  }
+}
 
 function updateSoftModifierButtons() {
   for (const button of softKeyboard?.querySelectorAll(".modifier") ?? []) {
