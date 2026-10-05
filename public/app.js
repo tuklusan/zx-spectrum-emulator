@@ -888,6 +888,7 @@ const softPointers = new Map();
 const latchedSoftModifiers = new Set();
 
 function clearInputState() {
+  for (const key of machine?.getPressedKeys() ?? []) machine.releaseKey(key);
   activeChords.clear();
   physicalShiftDown = false;
   softPointers.clear();
@@ -995,6 +996,11 @@ window.addEventListener("keyup", (event) => {
     if (physicalShiftDown && keys.includes("SYMBOL SHIFT")) machine.pressKey("CAPS SHIFT");
     return;
   }
+});
+
+window.addEventListener("blur", clearInputState);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearInputState();
 });
 
 runPauseButton.addEventListener("click", () => {
