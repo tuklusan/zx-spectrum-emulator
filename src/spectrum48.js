@@ -90,7 +90,6 @@ export class Spectrum48 {
     this.tapePulseLevels = new Uint8Array();
     this.tapePulseIndex = 0;
     this.tapeNextPulseTState = 0;
-    this.tapePlaybackEndCursor = 0;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
     this.inputPlayback = null;
@@ -195,14 +194,10 @@ export class Spectrum48 {
   }
 
   startTapePlayback({ startIndex = this.tapeCursor, initialPauseMs = 0 } = {}) {
-    const sequence = this.buildTapePulseSequence(startIndex, initialPauseMs);
-    this.tapePulseDurations = sequence.durations;
-    this.tapePulseLevels = sequence.levels;
-    this.tapePulseIndex = 0;
-    this.tapeEarLevel = Boolean(this.tapePulseLevels[0]);
-    this.tapePlaying = this.tapePulseDurations.length > 0;
-    this.tapePlaybackEndCursor = this.tapeBlocks.length;
-    this.tapeNextPulseTState = this.cpu.tStates + (this.tapePulseDurations[0] ?? 0);
+    this.stopTapePlayback();
+    this.tapeCursor = Math.max(0, Math.min(startIndex, this.tapeBlocks.length));
+    this.tapeEarLevel = false;
+    this.loadTapeBlockPulseSequence(initialPauseMs, this.cpu.tStates);
   }
 
   startTapePlaybackFromCursor() {
@@ -215,15 +210,34 @@ export class Spectrum48 {
     this.tapePulseLevels = new Uint8Array();
     this.tapePulseIndex = 0;
     this.tapeNextPulseTState = 0;
-    this.tapePlaybackEndCursor = this.tapeCursor;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
   }
 
-  buildTapePulseSequence(startIndex, initialPauseMs) {
+  loadTapeBlockPulseSequence(initialPauseMs = 0, startTState = this.cpu.tStates) {
+    let pauseMs = initialPauseMs;
+    while (this.tapeCursor < this.tapeBlocks.length) {
+      const sequence = this.buildTapeBlockPulseSequence(this.tapeCursor, pauseMs, this.tapeEarLevel);
+      pauseMs = 0;
+      if (sequence.durations.length > 0) {
+        this.tapePulseDurations = sequence.durations;
+        this.tapePulseLevels = sequence.levels;
+        this.tapePulseIndex = 0;
+        this.tapeEarLevel = Boolean(this.tapePulseLevels[0]);
+        this.tapePlaying = true;
+        this.tapeNextPulseTState = startTState + this.tapePulseDurations[0];
+        return true;
+      }
+      this.tapeCursor += 1;
+    }
+    this.stopTapePlayback();
+    return false;
+  }
+
+  buildTapeBlockPulseSequence(index, initialPauseMs = 0, initialLevel = false) {
     const durations = [];
     const levels = [];
-    let level = false;
+    let level = Boolean(initialLevel);
     const pushInterval = (duration) => {
       if (duration <= 0) return;
       durations.push(duration); levels.push(level ? 1 : 0);
@@ -248,9 +262,8 @@ export class Spectrum48 {
     };
 
     if (initialPauseMs > 0) pushInterval(Math.round(initialPauseMs * T_STATES_PER_MS));
-    for (let index = startIndex; index < this.tapeBlocks.length; index += 1) {
-      const block = this.tapeBlocks[index];
-      if (!block.checksumValid) continue;
+    const block = this.tapeBlocks[index];
+    if (block?.checksumValid !== false) {
       if (block.generalized) this.appendGeneralizedBlockPulses(appendSymbol, block.generalized);
       else this.appendDataBlockPulses(pushPulse, block);
       if (block.pauseMs > 0) pushInterval(Math.round(block.pauseMs * T_STATES_PER_MS));
@@ -310,9 +323,10 @@ export class Spectrum48 {
     while (this.tapePlaying && this.cpu.tStates >= this.tapeNextPulseTState) {
       this.tapePulseIndex += 1;
       if (this.tapePulseIndex >= this.tapePulseDurations.length) {
-        this.tapeCursor = this.tapePlaybackEndCursor;
-        this.stopTapePlayback();
-        return;
+        const nextBlockTState = this.tapeNextPulseTState;
+        this.tapeCursor += 1;
+        if (!this.loadTapeBlockPulseSequence(0, nextBlockTState)) return;
+        continue;
       }
       this.tapeEarLevel = Boolean(this.tapePulseLevels[this.tapePulseIndex]);
       this.tapeNextPulseTState += this.tapePulseDurations[this.tapePulseIndex];

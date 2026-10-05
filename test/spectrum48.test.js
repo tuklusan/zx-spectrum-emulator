@@ -385,3 +385,28 @@ test("reset restarts CPU and frame state without clearing RAM", () => {
   assert.equal(machine.frame, 0);
   assert.equal(machine.read8(0x4000), 0x77);
 });
+
+
+test("tape playback materializes only the current block", () => {
+  const machine = new Spectrum48({ rom: new Uint8Array(0x4000) });
+  const block = {
+    flag: 0xff,
+    payload: new Uint8Array([0x00]),
+    checksum: 0xff,
+    checksumValid: true,
+    pauseMs: 0
+  };
+  machine.setTapeBlocks([block, block]);
+  machine.startTapePlayback();
+
+  assert.equal(machine.tapeCursor, 0);
+  assert.equal(machine.tapePulseDurations.length, 3273);
+
+  const firstBlockDuration = machine.tapePulseDurations.reduce((sum, duration) => sum + duration, 0);
+  machine.cpu.tStates = firstBlockDuration;
+  machine.advanceTapePlayback();
+
+  assert.equal(machine.tapeCursor, 1);
+  assert.equal(machine.tapePlaying, true);
+  assert.equal(machine.tapePulseDurations.length, 3273);
+});
