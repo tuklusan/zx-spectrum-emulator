@@ -265,6 +265,16 @@ export class Spectrum48 {
       pushInterval(duration);
       level = !level;
     };
+    const appendPause = (pauseMs) => {
+      if (pauseMs <= 0) return;
+      const total = Math.round(pauseMs * T_STATES_PER_MS);
+      const settle = Math.min(total, Math.round(T_STATES_PER_MS));
+      level = !level;
+      pushInterval(settle);
+      const remaining = total - settle;
+      level = false;
+      if (remaining > 0) pushInterval(remaining);
+    };
     const appendSymbol = (symbol) => {
       switch (symbol.flags & 0x03) {
         case 0: level = !level; break;
@@ -285,7 +295,7 @@ export class Spectrum48 {
     if (block?.checksumValid !== false) {
       if (block?.generalized) this.appendGeneralizedBlockPulses(appendSymbol, block.generalized);
       else if (block) this.appendDataBlockPulses(pushPulse, block);
-      if (block?.pauseMs > 0) pushInterval(Math.round(block.pauseMs * T_STATES_PER_MS));
+      if (block?.pauseMs > 0) appendPause(block.pauseMs);
     }
 
     return {

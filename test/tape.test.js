@@ -174,13 +174,27 @@ test("preserves TZX pause and stop-tape control blocks", () => {
   assert.equal(blocks[1].stopTape, true);
 });
 
-test("TZX millisecond pauses use the 48K Spectrum clock", () => {
+test("TZX millisecond pauses finish the pulse then settle EAR low", () => {
   const blocks = parseTzx(makeTzx([[0x20, 0xe8, 0x03]]));
   const machine = makeMachine();
   machine.setTapeBlocks(blocks);
-  const sequence = machine.buildTapeBlockPulseSequence(0, 0);
-  assert.equal(sequence.durations.length, 1);
-  assert.equal(sequence.durations[0], 3_494_400);
+  const sequence = machine.buildTapeBlockPulseSequence(0, 0, false);
+  assert.deepEqual(Array.from(sequence.durations), [3_494, 3_490_906]);
+  assert.deepEqual(Array.from(sequence.levels), [1, 0]);
+  assert.equal(sequence.endingLevel, false);
+});
+
+test("zero-gap tape blocks do not invent a pause or reset the EAR phase", () => {
+  const raw = dataBlock([0x80]).slice(2);
+  const blocks = parseTzx(makeTzx([
+    turboTzxBlock(raw, { pilotCount: 3, pauseMs: 0 }),
+    turboTzxBlock(raw, { pilotCount: 3, pauseMs: 0 })
+  ]));
+  const machine = makeMachine();
+  machine.setTapeBlocks(blocks);
+  const first = machine.buildTapeBlockPulseSequence(0, 0, false);
+  const second = machine.buildTapeBlockPulseSequence(1, 0, first.endingLevel);
+  assert.equal(second.levels[0], Number(first.endingLevel));
 });
 
 test("feeds mounted TAP blocks to the ROM tape load routine", () => {
