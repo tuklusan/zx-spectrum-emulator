@@ -373,6 +373,21 @@ test("renders a full frame buffer with border around the display", () => {
   assert.deepEqual(Array.from(rgba.slice(displayPixel, displayPixel + 4)), [205, 0, 0, 255]);
 });
 
+test("reuses caller-owned display and frame buffers", () => {
+  const machine = new Spectrum48({ rom: makeRom() });
+  machine.write8(0x4000, 0x80);
+  machine.write8(0x5800, 0x02);
+
+  const display = new Uint8ClampedArray(Spectrum48.SCREEN_WIDTH * Spectrum48.SCREEN_HEIGHT * 4);
+  const frame = new Uint8ClampedArray(Spectrum48.FRAME_WIDTH * Spectrum48.FRAME_HEIGHT * 4);
+
+  assert.equal(machine.renderDisplayRgba({ target: display }), display);
+  assert.equal(machine.renderFrameRgba({ target: frame }), frame);
+  assert.deepEqual(Array.from(display.slice(0, 4)), [205, 0, 0, 255]);
+  const displayPixel = ((Spectrum48.BORDER_TOP * Spectrum48.FRAME_WIDTH) + Spectrum48.BORDER_LEFT) * 4;
+  assert.deepEqual(Array.from(frame.slice(displayPixel, displayPixel + 4)), [205, 0, 0, 255]);
+});
+
 test("reset restarts CPU and frame state without clearing RAM", () => {
   const machine = new Spectrum48({ rom: makeRom() });
   machine.write8(0x4000, 0x77);

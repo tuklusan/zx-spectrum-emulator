@@ -26,6 +26,7 @@ import { normalizeRemoteFileUrl, normalizeTapeUrl } from "./tape-url.js?v=202610
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
+const frameImageData = context.createImageData(Spectrum48.FRAME_WIDTH, Spectrum48.FRAME_HEIGHT);
 const rasterOverlay = document.querySelector("#rasterOverlay");
 const audioStartGate = document.querySelector("#audioStartGate");
 const rasterContext = rasterOverlay.getContext("2d");
@@ -229,9 +230,8 @@ function runFrames(count, { audioOutput = false } = {}) {
 }
 
 function drawSpectrumScreen() {
-  const frame = machine.renderFrameRgba({ flashOn });
-  const imageData = new ImageData(frame, Spectrum48.FRAME_WIDTH, Spectrum48.FRAME_HEIGHT);
-  context.putImageData(imageData, 0, 0);
+  machine.renderFrameRgba({ flashOn, target: frameImageData.data });
+  context.putImageData(frameImageData, 0, 0);
   if (advancedToolsDetails?.open && showRasterOverlayInput.checked) drawRasterOverlay();
 }
 

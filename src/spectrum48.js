@@ -371,9 +371,12 @@ export class Spectrum48 {
     return pressed.sort();
   }
 
-  renderDisplayRgba({ flashOn = false } = {}) {
-    const rgba = new Uint8ClampedArray(Spectrum48.SCREEN_WIDTH * Spectrum48.SCREEN_HEIGHT * 4);
-
+  renderDisplayInto(rgba, {
+    flashOn = false,
+    stride = Spectrum48.SCREEN_WIDTH,
+    xOffset = 0,
+    yOffset = 0
+  } = {}) {
     for (let y = 0; y < Spectrum48.SCREEN_HEIGHT; y += 1) {
       for (let xByte = 0; xByte < 32; xByte += 1) {
         const pixelByte = this.read8(this.screenByteAddress(xByte, y));
@@ -386,7 +389,7 @@ export class Spectrum48 {
         for (let bit = 0; bit < 8; bit += 1) {
           const pixelSet = (pixelByte & (0x80 >> bit)) !== 0;
           const color = pixelSet !== flash ? ink : paper;
-          const offset = ((y * Spectrum48.SCREEN_WIDTH) + (xByte * 8) + bit) * 4;
+          const offset = ((((y + yOffset) * stride) + xOffset + (xByte * 8) + bit) * 4);
           rgba[offset] = color[0];
           rgba[offset + 1] = color[1];
           rgba[offset + 2] = color[2];
@@ -394,12 +397,24 @@ export class Spectrum48 {
         }
       }
     }
-
     return rgba;
   }
 
-  renderFrameRgba({ flashOn = false } = {}) {
-    const rgba = new Uint8ClampedArray(Spectrum48.FRAME_WIDTH * Spectrum48.FRAME_HEIGHT * 4);
+  renderDisplayRgba({ flashOn = false, target = null } = {}) {
+    const length = Spectrum48.SCREEN_WIDTH * Spectrum48.SCREEN_HEIGHT * 4;
+    const rgba = target ?? new Uint8ClampedArray(length);
+    if (!(rgba instanceof Uint8ClampedArray) || rgba.length !== length) {
+      throw new Error("Spectrum display target has the wrong size");
+    }
+    return this.renderDisplayInto(rgba, { flashOn });
+  }
+
+  renderFrameRgba({ flashOn = false, target = null } = {}) {
+    const length = Spectrum48.FRAME_WIDTH * Spectrum48.FRAME_HEIGHT * 4;
+    const rgba = target ?? new Uint8ClampedArray(length);
+    if (!(rgba instanceof Uint8ClampedArray) || rgba.length !== length) {
+      throw new Error("Spectrum frame target has the wrong size");
+    }
     const border = PALETTE[0][this.borderColor];
 
     for (let offset = 0; offset < rgba.length; offset += 4) {
@@ -409,15 +424,12 @@ export class Spectrum48 {
       rgba[offset + 3] = 0xff;
     }
 
-    const display = this.renderDisplayRgba({ flashOn });
-    for (let y = 0; y < Spectrum48.SCREEN_HEIGHT; y += 1) {
-      const sourceOffset = y * Spectrum48.SCREEN_WIDTH * 4;
-      const targetOffset =
-        (((y + Spectrum48.BORDER_TOP) * Spectrum48.FRAME_WIDTH) + Spectrum48.BORDER_LEFT) * 4;
-      rgba.set(display.subarray(sourceOffset, sourceOffset + Spectrum48.SCREEN_WIDTH * 4), targetOffset);
-    }
-
-    return rgba;
+    return this.renderDisplayInto(rgba, {
+      flashOn,
+      stride: Spectrum48.FRAME_WIDTH,
+      xOffset: Spectrum48.BORDER_LEFT,
+      yOffset: Spectrum48.BORDER_TOP
+    });
   }
 
   screenByteAddress(xByte, y) {
