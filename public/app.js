@@ -22,7 +22,7 @@ import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { loadTapEntry, parseTapeFile, tapEntries } from "./tape.js?v=20261004-tzx-url";
 import { unwrapSpectrumMedia } from "./media.js?v=20261005-unified-media";
-import { normalizeRemoteFileUrl, normalizeTapeUrl } from "./tape-url.js?v=20261005-url-loaders";
+import { normalizeRemoteFileUrl, normalizeTapeUrl } from "./tape-url.js?v=20261005-zxinfo-mirror";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");

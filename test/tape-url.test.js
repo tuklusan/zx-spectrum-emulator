@@ -33,3 +33,25 @@ test("generic remote file errors use the requested label", () => {
     /snapshot URL scheme/
   );
 });
+
+test("rewrites Spectrum Computing ZXDB media to the ZXInfo mirror", () => {
+  assert.equal(
+    normalizeRemoteFileUrl(
+      "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip",
+      "https://tuklusan.github.io/zx-spectrum-emulator/",
+      "Media"
+    ),
+    "https://zxinfo.dk/media/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip"
+  );
+});
+
+test("keeps non-ZXDB Spectrum Computing URLs on their original host", () => {
+  assert.equal(
+    normalizeRemoteFileUrl(
+      "https://spectrumcomputing.co.uk/entry/30084",
+      "https://tuklusan.github.io/zx-spectrum-emulator/",
+      "Media"
+    ),
+    "https://spectrumcomputing.co.uk/entry/30084"
+  );
+});
