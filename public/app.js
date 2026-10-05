@@ -387,8 +387,12 @@ function autoloadMountedTape() {
   const taps = basicTextToSpectrumKeyTaps('LOAD ""');
   for (const keys of taps) tapSpectrumKeys(keys);
   machine.setTapeCursor(0);
-  machine.startTapePlayback({ startIndex: 0, initialPauseMs: 0 });
+
+  // Finish the ENTER press while the cassette is still stopped. The ROM can
+  // reach its tape-wait loop without eating the front of the pilot tone.
   tapSpectrumKeys(["ENTER"], 2, 2);
+  machine.startTapePlayback({ startIndex: 0, initialPauseMs: 0 });
+  audio?.reset(machine.cpu.tStates);
   statusOutput.value = 'Autoload started with LOAD ""';
 }
 

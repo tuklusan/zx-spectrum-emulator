@@ -178,6 +178,9 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.doesNotMatch(app, /loadTapEntry/);
   assert.match(app, /function prepareAutoloadAudio/);
   assert.match(app, /function waitForAutoloadAudioGesture/);
+  const autoloadFunction = app.slice(app.indexOf("function autoloadMountedTape"), app.indexOf("function audioIsRunning"));
+  assert.ok(autoloadFunction.indexOf('tapSpectrumKeys(["ENTER"]') < autoloadFunction.indexOf("startTapePlayback"));
+  assert.ok(autoloadFunction.indexOf("setTapeCursor(0)") < autoloadFunction.indexOf('tapSpectrumKeys(["ENTER"]'));
   assert.match(app, /if \(!prepareAutoloadAudio\(\)\) await waitForAutoloadAudioGesture\(\)/);
   assert.match(app, /audioStartGate\.hidden = false/);
   assert.match(app, /await audio\.resume\(\)/);
