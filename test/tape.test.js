@@ -282,3 +282,26 @@ test("parses and expands generalized TZX fast-loader data", () => {
   assert.deepEqual(Array.from(sequence.durations.slice(258)), [1710,855,855,855,855,855,855,855]);
   assert.equal(sequence.levels.length, sequence.durations.length);
 });
+
+
+test("preserves EAR phase across zero-gap turbo block boundaries", () => {
+  const firstRaw = dataBlock([0x80]).slice(2);
+  const secondRaw = dataBlock([0x40]).slice(2);
+  const blocks = parseTzx(makeTzx([
+    turboTzxBlock(firstRaw, { pilotCount: 2824, pauseMs: 0 }),
+    turboTzxBlock(secondRaw, { pilotCount: 2420, pauseMs: 0 })
+  ]));
+  const machine = makeMachine();
+  machine.setTapeBlocks(blocks);
+
+  const firstSequence = machine.buildTapeBlockPulseSequence(0, 0, false);
+  machine.startTapePlayback();
+  const firstDuration = machine.tapePulseDurations.reduce((sum, duration) => sum + duration, 0);
+  machine.cpu.tStates = firstDuration;
+  machine.advanceTapePlayback();
+
+  assert.equal(machine.tapeCursor, 1);
+  assert.equal(machine.tapePlaying, true);
+  assert.equal(machine.tapeEarLevel, firstSequence.endingLevel);
+  assert.equal(Boolean(machine.tapePulseLevels[0]), firstSequence.endingLevel);
+});

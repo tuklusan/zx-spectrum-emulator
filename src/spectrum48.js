@@ -90,6 +90,7 @@ export class Spectrum48 {
     this.tapePulseLevels = new Uint8Array();
     this.tapePulseIndex = 0;
     this.tapeNextPulseTState = 0;
+    this.tapeSequenceEndingLevel = false;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
     this.inputPlayback = null;
@@ -210,6 +211,7 @@ export class Spectrum48 {
     this.tapePulseLevels = new Uint8Array();
     this.tapePulseIndex = 0;
     this.tapeNextPulseTState = 0;
+    this.tapeSequenceEndingLevel = false;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
   }
@@ -220,6 +222,7 @@ export class Spectrum48 {
       const sequence = this.buildTapeBlockPulseSequence(this.tapeCursor, pauseMs, this.tapeEarLevel);
       pauseMs = 0;
       if (sequence.durations.length > 0) {
+        this.tapeSequenceEndingLevel = sequence.endingLevel;
         this.tapePulseDurations = sequence.durations;
         this.tapePulseLevels = sequence.levels;
         this.tapePulseIndex = 0;
@@ -268,7 +271,11 @@ export class Spectrum48 {
       else this.appendDataBlockPulses(pushPulse, block);
       if (block.pauseMs > 0) pushInterval(Math.round(block.pauseMs * T_STATES_PER_MS));
     }
-    return { durations: Uint32Array.from(durations), levels: Uint8Array.from(levels) };
+    return {
+      durations: Uint32Array.from(durations),
+      levels: Uint8Array.from(levels),
+      endingLevel: level
+    };
   }
 
   appendDataBlockPulses(pushPulse, block) {
@@ -324,6 +331,7 @@ export class Spectrum48 {
       this.tapePulseIndex += 1;
       if (this.tapePulseIndex >= this.tapePulseDurations.length) {
         const nextBlockTState = this.tapeNextPulseTState;
+        this.tapeEarLevel = this.tapeSequenceEndingLevel;
         this.tapeCursor += 1;
         if (!this.loadTapeBlockPulseSequence(0, nextBlockTState)) return;
         continue;
