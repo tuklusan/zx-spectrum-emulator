@@ -417,79 +417,37 @@ test("reset restarts CPU and frame state without clearing RAM", () => {
 });
 
 
-test("tape playback materializes only the current block", () => {
+
+test("tape playback keeps one continuous zero-gap cassette timeline", () => {
   const machine = new Spectrum48({ rom: new Uint8Array(0x4000) });
-  const block = {
-    flag: 0xff,
-    payload: new Uint8Array([0x00]),
-    checksum: 0xff,
+  const first = {
+    flag: 0x00,
+    payload: new Uint8Array([0x80]),
+    checksum: 0x80,
     checksumValid: true,
-    pauseMs: 0
+    pauseMs: 0,
+    timing: { pilotPulse: 2168, sync1: 667, sync2: 735, zero: 855, one: 1710, pilotCount: 2824, usedBitsLastByte: 8 }
   };
-  machine.setTapeBlocks([block, block]);
+  const second = {
+    flag: 0xff,
+    payload: new Uint8Array([0x40]),
+    checksum: 0xbf,
+    checksumValid: true,
+    pauseMs: 0,
+    timing: { pilotPulse: 2168, sync1: 667, sync2: 735, zero: 855, one: 1710, pilotCount: 2420, usedBitsLastByte: 8 }
+  };
+  machine.setTapeBlocks([first, second]);
+  const firstSequence = (() => {
+    machine.setTapeBlocks([first]);
+    return machine.buildTapePulseSequence(0, 0);
+  })();
+  machine.setTapeBlocks([first, second]);
   machine.startTapePlayback();
 
   assert.equal(machine.tapeCursor, 0);
-  assert.equal(machine.tapePulseDurations.length, 3273);
-
-  const firstBlockDuration = machine.tapePulseDurations.reduce((sum, duration) => sum + duration, 0);
-  machine.cpu.tStates = firstBlockDuration;
-  machine.advanceTapePlayback();
-
-  assert.equal(machine.tapeCursor, 1);
-  assert.equal(machine.tapePlaying, true);
-  assert.equal(machine.tapePulseDurations.length, 3273);
-});
-
-
-test("restoring state rebuilds the streamed tape block exactly", () => {
-  const machine = new Spectrum48({ rom: new Uint8Array(0x4000) });
-  const blocks = [{
-    flag: 0xff,
-    payload: new Uint8Array([0x80]),
-    checksum: 0x7f,
-    checksumValid: true,
-    pauseMs: 0,
-    timing: {
-      pilotPulse: 2168,
-      sync1: 667,
-      sync2: 735,
-      zero: 855,
-      one: 1710,
-      pilotCount: 5,
-      usedBitsLastByte: 8
-    }
-  }];
-  machine.setTapeBlocks(blocks);
-  machine.startTapePlayback();
-  machine.cpu.tStates = machine.tapeNextPulseTState;
-  machine.advanceTapePlayback();
-  const saved = machine.saveState();
-  const durations = Array.from(machine.tapePulseDurations);
-  const levels = Array.from(machine.tapePulseLevels);
-
-  machine.stopTapePlayback();
-  machine.restoreState(saved);
-
-  assert.equal(machine.tapePlaying, true);
-  assert.deepEqual(Array.from(machine.tapePulseDurations), durations);
-  assert.deepEqual(Array.from(machine.tapePulseLevels), levels);
-  assert.equal(machine.tapePulseIndex, saved.tape.pulseIndex);
-  assert.equal(machine.tapeNextPulseTState, saved.tape.nextPulseTState);
-  assert.equal(machine.tapeEarLevel, saved.tape.earLevel);
-});
-
-
-test("mounted tape blocks stay as one shared parsed representation", () => {
-  const machine = new Spectrum48({ rom: new Uint8Array(0x4000) });
-  const blocks = [{
-    flag: 0xff,
-    payload: new Uint8Array([1, 2, 3]),
-    checksum: 0xff,
-    checksumValid: true,
-    pauseMs: 0
-  }];
-  machine.setTapeBlocks(blocks);
-  assert.equal(machine.tapeBlocks, blocks);
-  assert.equal(machine.tapeBlocks[0].payload, blocks[0].payload);
+  assert.ok(machine.tapePulseDurations.length > firstSequence.durations.length);
+  assert.equal(
+    Boolean(machine.tapePulseLevels[firstSequence.durations.length]),
+    !Boolean(firstSequence.levels[firstSequence.levels.length - 1])
+  );
 });

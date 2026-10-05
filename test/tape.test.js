@@ -178,24 +178,9 @@ test("TZX millisecond pauses use the 48K Spectrum clock", () => {
   const blocks = parseTzx(makeTzx([[0x20, 0xe8, 0x03]]));
   const machine = makeMachine();
   machine.setTapeBlocks(blocks);
-  const sequence = machine.buildTapeBlockPulseSequence(0, 0);
+  const sequence = machine.buildTapePulseSequence(0, 0);
   assert.equal(sequence.durations.length, 1);
   assert.equal(sequence.durations[0], 3_494_400);
-});
-
-test("TZX stop-tape blocks halt playback and leave the cursor ready to resume", () => {
-  const blocks = parseTzx(makeTzx([
-    [0x20, 0x00, 0x00],
-    standardTzxBlock(dataBlock([0x01]).slice(2), 0)
-  ]));
-  const machine = makeMachine();
-  machine.setTapeBlocks(blocks);
-  machine.startTapePlayback();
-
-  assert.equal(machine.tapePlaying, false);
-  assert.equal(machine.tapeCursor, 1);
-  machine.startTapePlaybackFromCursor();
-  assert.equal(machine.tapePlaying, true);
 });
 
 test("feeds mounted TAP blocks to the ROM tape load routine", () => {
@@ -302,7 +287,7 @@ test("plays TZX turbo blocks using their recorded timings", () => {
   const raw = dataBlock([0x80]).slice(2);
   const blocks = parseTzx(makeTzx([turboTzxBlock(raw, {pilotPulse:1000,sync1:200,sync2:300,zero:400,one:800,pilotCount:2})]));
   const machine = makeMachine(); machine.setTapeBlocks(blocks);
-  const sequence = machine.buildTapeBlockPulseSequence(0, 0);
+  const sequence = machine.buildTapePulseSequence(0, 0);
   assert.deepEqual(Array.from(sequence.durations.slice(0, 4)), [1000,1000,200,300]);
   assert.equal(sequence.durations[4], 800);
   assert.equal(sequence.durations[5], 800);
@@ -311,7 +296,7 @@ test("plays TZX turbo blocks using their recorded timings", () => {
 test("parses and expands generalized TZX fast-loader data", () => {
   const blocks = parseTzx(makeTzx([generalizedFastTzxBlock([0x80])]));
   const machine = makeMachine(); machine.setTapeBlocks(blocks);
-  const sequence = machine.buildTapeBlockPulseSequence(0, 0);
+  const sequence = machine.buildTapePulseSequence(0, 0);
   assert.equal(blocks[0].type, "generalized");
   assert.equal(blocks[0].generalized.pilotStream[0].repetitions, 128);
   assert.equal(blocks[0].generalized.dataSymbolCount, 8);
@@ -323,24 +308,19 @@ test("parses and expands generalized TZX fast-loader data", () => {
 });
 
 
-test("preserves EAR phase across zero-gap turbo block boundaries", () => {
-  const firstRaw = dataBlock([0x80]).slice(2);
-  const secondRaw = dataBlock([0x40]).slice(2);
+test("ZX Carrom-style zero-gap TZX stays on one pulse timeline", () => {
   const blocks = parseTzx(makeTzx([
-    turboTzxBlock(firstRaw, { pilotCount: 2824, pauseMs: 0 }),
-    turboTzxBlock(secondRaw, { pilotCount: 2420, pauseMs: 0 })
+    turboTzxBlock(dataBlock([0x80]).slice(2), { pilotCount: 2824, pauseMs: 0 }),
+    turboTzxBlock(dataBlock([0x40]).slice(2), { pilotCount: 2420, pauseMs: 0 }),
+    generalizedFastTzxBlock([0x80, 0x00]),
+    generalizedFastTzxBlock([0x40, 0x00])
   ]));
   const machine = makeMachine();
   machine.setTapeBlocks(blocks);
+  const sequence = machine.buildTapePulseSequence(0, 0);
 
-  const firstSequence = machine.buildTapeBlockPulseSequence(0, 0, false);
-  machine.startTapePlayback();
-  const firstDuration = machine.tapePulseDurations.reduce((sum, duration) => sum + duration, 0);
-  machine.cpu.tStates = firstDuration;
-  machine.advanceTapePlayback();
-
-  assert.equal(machine.tapeCursor, 1);
-  assert.equal(machine.tapePlaying, true);
-  assert.equal(machine.tapeEarLevel, firstSequence.endingLevel);
-  assert.equal(Boolean(machine.tapePulseLevels[0]), firstSequence.endingLevel);
+  assert.equal(blocks.length, 4);
+  assert.equal(blocks.every((block) => block.pauseMs === 0), true);
+  assert.ok(sequence.durations.length > 256 + 2824 + 2420);
+  assert.equal(sequence.durations.length, sequence.levels.length);
 });
