@@ -121,6 +121,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(index, /<span class="spectrum-key-bottom">ASN<\/span>/);
   assert.match(index, /<span class="legend green">IN KEY \$<\/span>/);
   assert.match(index, /<span class="key-special-main">BREAK<br>SPACE<\/span>/);
+  assert.match(index, /data-spectrum-key="8"[\s\S]*?<span class="key-mosaic" aria-hidden="true"><i><\/i><i><\/i><i><\/i><i><\/i><\/span>/);
   assert.match(index, /<details id="advancedTools" class="advanced-tools">/);
   assert.doesNotMatch(index, /<details id="advancedTools" class="advanced-tools" open/);
   assert.match(index, /<details id="debugWorkbench" class="debug-drawer">/);
