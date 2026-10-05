@@ -499,7 +499,7 @@ export class Spectrum48 {
     const block = this.tapeBlocks[this.tapeCursor];
     const expectedFlag = this.cpu.A & 0xff;
     const requestedLength = this.cpu.DE & 0xffff;
-    if (!block.fastLoadable || !block.checksumValid || block.flag !== expectedFlag || block.payload.length !== requestedLength) {
+    if (block.fastLoadable === false || !block.checksumValid || block.flag !== expectedFlag || block.payload.length !== requestedLength) {
       return 0;
     }
 
