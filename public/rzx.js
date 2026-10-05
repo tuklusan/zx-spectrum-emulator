@@ -36,7 +36,7 @@ async function inflate(bytes, expectedLength = null) {
   return result;
 }
 
-async function parseSnapshotBlock(block, resolveExternalSnapshot) {
+async function parseSnapshotBlock(block) {
   if (block.length < 17) throw new Error("RZX snapshot block is truncated");
   const flags = read32(block, 5);
   const extension = readAscii(block, 9, 4).trim().toUpperCase();
@@ -44,14 +44,10 @@ async function parseSnapshotBlock(block, resolveExternalSnapshot) {
   const payload = block.slice(17);
   if (flags & 0x01) {
     if (payload.length < 5) throw new Error("External RZX snapshot descriptor is truncated");
-    const checksum = read32(payload, 0);
     const filename = readAscii(payload, 4, payload.length - 4);
-    if (!resolveExternalSnapshot) {
-      throw new Error(`RZX requires external snapshot ${filename || "(unnamed)"}; select it alongside the recording`);
-    }
-    const resolved = await resolveExternalSnapshot({ filename, extension, checksum });
-    if (!resolved) throw new Error(`External RZX snapshot ${filename || "(unnamed)"} was not supplied`);
-    return { type: "snapshot", extension, data: bytesFrom(resolved), external: true, filename };
+    throw new Error(
+      `External RZX snapshot ${filename || "(unnamed)"} is not supported; use an RZX with an embedded SNA or Z80 snapshot`
+    );
   }
   const data = flags & 0x02 ? await inflate(payload, uncompressedLength) : payload;
   if (!(flags & 0x02) && data.length !== uncompressedLength) {
@@ -94,7 +90,7 @@ async function parseInputBlock(block, previousInputs) {
   return { frames, previousInputs: lastInputs, initialTStates };
 }
 
-export async function parseRzx(input, { resolveExternalSnapshot } = {}) {
+export async function parseRzx(input) {
   const bytes = bytesFrom(input);
   if (bytes.length < RZX_HEADER_LENGTH || readAscii(bytes, 0, 4) !== "RZX!") {
     throw new Error("RZX file has an invalid header");
@@ -115,7 +111,7 @@ export async function parseRzx(input, { resolveExternalSnapshot } = {}) {
       if (block.length < 29) throw new Error("RZX creator block is truncated");
       creator = readAscii(block, 5, 20) || "Unknown";
     } else if (block[0] === SNAPSHOT_BLOCK) {
-      timeline.push(await parseSnapshotBlock(block, resolveExternalSnapshot));
+      timeline.push(await parseSnapshotBlock(block));
     } else if (block[0] === INPUT_BLOCK) {
       const parsed = await parseInputBlock(block, previousInputs);
       timeline.push({ type: "input-start", tStates: parsed.initialTStates });

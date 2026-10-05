@@ -126,20 +126,17 @@ test("plays RZX frames from an embedded Z80 snapshot", async () => {
   assert.equal(playback.done, true);
 });
 
-test("resolves external RZX snapshots supplied beside the recording", async () => {
-  const supplied = new Uint8Array([1, 2, 3]);
+test("rejects external RZX snapshots with a useful filename", async () => {
   const frame = new Uint8Array(4);
   write16(frame, 0, 1);
-  const recording = await parseRzx(join(
-    rzxHeader(),
-    externalSnapshotBlock("start.z80"),
-    inputBlock(frame, 1)
-  ), {
-    resolveExternalSnapshot: ({ filename }) => filename === "start.z80" ? supplied : null
-  });
-  assert.equal(recording.timeline[0].external, true);
-  assert.equal(recording.timeline[0].filename, "start.z80");
-  assert.deepEqual(Array.from(recording.timeline[0].data), [1, 2, 3]);
+  await assert.rejects(
+    () => parseRzx(join(
+      rzxHeader(),
+      externalSnapshotBlock("start.z80"),
+      inputBlock(frame, 1)
+    )),
+    /External RZX snapshot start\.z80 is not supported; use an RZX with an embedded SNA or Z80 snapshot/
+  );
 });
 
 test("plays RZX frames from an embedded 48K SNA snapshot", async () => {
@@ -156,7 +153,7 @@ test("plays RZX frames from an embedded 48K SNA snapshot", async () => {
   assert.equal(machine.cpu.PC, 0x9001);
 });
 
-test("rejects protected and external RZX data", async () => {
+test("rejects protected RZX input data and truncated external descriptors", async () => {
   const protectedBlock = inputBlock(new Uint8Array(4), 1);
   write32(protectedBlock, 14, 1);
   await assert.rejects(() => parseRzx(join(rzxHeader(), protectedBlock)), /Protected/);
@@ -165,5 +162,5 @@ test("rejects protected and external RZX data", async () => {
   external[0] = 0x30;
   write32(external, 1, external.length);
   write32(external, 5, 1);
-  await assert.rejects(() => parseRzx(join(rzxHeader(), external)), /External/);
+  await assert.rejects(() => parseRzx(join(rzxHeader(), external)), /descriptor is truncated/);
 });
