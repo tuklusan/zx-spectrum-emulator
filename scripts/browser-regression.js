@@ -15,13 +15,13 @@ const fixtures = [
   {
     name: "carrom",
     url: "https://raw.githubusercontent.com/tuklusan/ZX-Carrom/main/dist/zxcarrom.tzx",
-    budgetMs: 30_000
+    budgetMs: 12_000
   },
   {
     name: "dreamwalker",
     sourceUrl: "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip",
     browserPath: "/__fixtures/DreamWalker(48K).tzx.zip",
-    budgetMs: 30_000
+    budgetMs: 12_000
   }
 ];
 
@@ -87,7 +87,7 @@ function staticServer() {
   });
 }
 
-function runChrome(chrome, args, timeoutMs = 75_000) {
+function runChrome(chrome, args, timeoutMs = 45_000) {
   return new Promise((resolveRun, rejectRun) => {
     const child = spawn(chrome, args, { stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
@@ -143,14 +143,33 @@ function assertHealthyDom(html, label) {
 await mkdir(OUTPUT, { recursive: true });
 for (const fixture of fixtures) {
   if (!fixture.browserPath) continue;
-  const response = await fetch(fixture.sourceUrl, { redirect: "follow" });
-  if (!response.ok) {
-    throw new Error(`${fixture.name}: fixture fetch failed with HTTP ${response.status}`);
+  const mirrors = [
+    fixture.sourceUrl,
+    fixture.sourceUrl.replace(
+      "https://spectrumcomputing.co.uk/zxdb/",
+      "https://zxinfo.dk/media/zxdb/"
+    )
+  ];
+  let bytes = null;
+  let lastError = null;
+  for (const sourceUrl of mirrors) {
+    try {
+      const response = await fetch(sourceUrl, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(12_000)
+      });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const candidate = new Uint8Array(await response.arrayBuffer());
+      if (candidate.length < 1_000) throw new Error("download is unexpectedly small");
+      bytes = candidate;
+      console.log(`Fetched ${fixture.name} fixture from ${sourceUrl}: ${bytes.length} bytes`);
+      break;
+    } catch (error) {
+      lastError = error;
+    }
   }
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.length < 1_000) throw new Error(`${fixture.name}: fixture download is unexpectedly small`);
+  if (!bytes) throw new Error(`${fixture.name}: fixture fetch failed: ${lastError?.message ?? "unknown error"}`);
   fixtureBodies.set(fixture.browserPath, bytes);
-  console.log(`Fetched ${fixture.name} fixture: ${bytes.length} bytes`);
 }
 const chrome = findChrome();
 const server = staticServer();

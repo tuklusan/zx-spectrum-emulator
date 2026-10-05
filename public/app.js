@@ -22,7 +22,7 @@ import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
 import { unwrapSpectrumMedia } from "./media.js?v=20261005-unified-media";
-import { normalizeRemoteFileUrl, normalizeTapeUrl } from "./tape-url.js?v=20261005-zxinfo-mirror";
+import { allOriginsRawUrl, normalizeRemoteFileUrl, normalizeTapeUrl } from "./tape-url.js?v=20261005-cors-fallback";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
@@ -555,6 +555,37 @@ async function loadRzxBytes(input, label, { beforeApply = () => {} } = {}) {
   return recording;
 }
 
+async function fetchRemoteMedia(url, signal) {
+  let directFailure = null;
+  try {
+    const response = await fetch(url, { mode: "cors", signal });
+    if (response.ok) return response;
+    directFailure = new Error("HTTP " + response.status);
+    if (![401, 403, 429, 451].includes(response.status)) {
+      throw new Error("Media fetch failed: HTTP " + response.status);
+    }
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    if (!(error instanceof TypeError) && !directFailure) throw error;
+    directFailure ??= error;
+  }
+
+  const proxyUrl = allOriginsRawUrl(url);
+  statusOutput.value = "Direct media fetch blocked; retrying through CORS bridge";
+  try {
+    const response = await fetch(proxyUrl, { mode: "cors", signal });
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    return response;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new Error(
+      "Media fetch failed directly and through the CORS bridge"
+      + (directFailure?.message ? ": " + directFailure.message : ""),
+      { cause: error }
+    );
+  }
+}
+
 async function loadSpectrumMedia(source, {
   label = "media",
   requireTape = false,
@@ -568,13 +599,10 @@ async function loadSpectrumMedia(source, {
   if (typeof source === "string") {
     resolvedUrl = normalizeRemoteFileUrl(source, window.location.href, "Media");
     statusOutput.value = "Fetching media from " + resolvedUrl;
-    const response = await fetch(resolvedUrl, {
-      mode: "cors",
-      signal: request?.controller.signal
-    });
-    if (!response.ok) throw new Error("Media fetch failed: HTTP " + response.status);
+    const response = await fetchRemoteMedia(resolvedUrl, request?.controller.signal);
     input = await response.arrayBuffer();
-    sourceLabel = response.url || resolvedUrl;
+    // A proxy URL has no useful filename. Keep the original target for type detection.
+    sourceLabel = resolvedUrl;
   } else if (source && typeof source.arrayBuffer === "function") {
     input = await source.arrayBuffer();
     sourceLabel = source.name || label;

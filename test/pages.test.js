@@ -202,6 +202,10 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.ok(autoloadFunction.indexOf("startTapePlayback") < autoloadFunction.indexOf('tapSpectrumKeys(["ENTER"]'));
   assert.ok(autoloadFunction.indexOf("setTapeCursor(0)") < autoloadFunction.indexOf("startTapePlayback"));
   const loadMediaFunction = app.slice(app.indexOf("async function loadSpectrumMedia"), app.indexOf("async function replaceSpectrumMedia"));
+  assert.match(app, /async function fetchRemoteMedia/);
+  assert.match(app, /allOriginsRawUrl\(url\)/);
+  assert.match(app, /Direct media fetch blocked; retrying through CORS bridge/);
+  assert.match(loadMediaFunction, /sourceLabel = resolvedUrl/);
   const mediaAudioGateIndex = loadMediaFunction.indexOf("waitForAutoloadAudioGesture");
   assert.ok(mediaAudioGateIndex > 0);
   for (const applyMarker of [

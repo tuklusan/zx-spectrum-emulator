@@ -22,3 +22,14 @@ export function normalizeRemoteFileUrl(value, baseUrl = globalThis.location?.hre
 export function normalizeTapeUrl(value, baseUrl = globalThis.location?.href ?? "https://localhost/") {
   return normalizeRemoteFileUrl(value, baseUrl, "Tape");
 }
+
+
+export function allOriginsRawUrl(value) {
+  const target = new URL(String(value ?? "").trim());
+  if (target.protocol !== "https:" && target.protocol !== "http:") {
+    throw new Error("CORS bridge only supports HTTP(S) URLs");
+  }
+  const proxy = new URL("https://api.allorigins.win/raw");
+  proxy.searchParams.set("url", target.href);
+  return proxy.href;
+}

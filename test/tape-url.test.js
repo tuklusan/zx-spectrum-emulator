@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeRemoteFileUrl, normalizeTapeUrl } from "../public/tape-url.js";
+import { allOriginsRawUrl, normalizeRemoteFileUrl, normalizeTapeUrl } from "../public/tape-url.js";
 
 test("rewrites GitHub blob links to raw file URLs", () => {
   assert.equal(normalizeTapeUrl("https://github.com/tuklusan/ZX-Carrom/blob/main/dist/zxcarrom.tzx","https://tuklusan.github.io/zx-spectrum-emulator/"),
@@ -54,4 +54,17 @@ test("keeps non-ZXDB Spectrum Computing URLs on their original host", () => {
     ),
     "https://spectrumcomputing.co.uk/entry/30084"
   );
+});
+
+
+test("builds an AllOrigins raw fallback without changing the target URL", () => {
+  const target = "https://example.com/games/Hello World.tzx?x=1&y=2";
+  const proxied = new URL(allOriginsRawUrl(target));
+  assert.equal(proxied.origin, "https://api.allorigins.win");
+  assert.equal(proxied.pathname, "/raw");
+  assert.equal(proxied.searchParams.get("url"), target);
+});
+
+test("rejects non-web URLs for the CORS bridge", () => {
+  assert.throws(() => allOriginsRawUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
 });
