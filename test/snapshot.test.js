@@ -113,6 +113,27 @@ test("saves and restores an uncompressed Z80 v1 snapshot", () => {
   assert.equal(restored.read8(0xffff), 0x03);
 });
 
+test("saves PC 0000 as an unambiguous extended 48K Z80 snapshot", () => {
+  const machine = makeMachine();
+  machine.cpu.PC = 0x0000;
+  machine.cpu.SP = 0xff00;
+  machine.write8(0x4000, 0x11);
+  machine.write8(0x8000, 0x22);
+  machine.write8(0xc000, 0x33);
+
+  const bytes = createZ80Snapshot(machine);
+  assert.equal(bytes[6] | (bytes[7] << 8), 0);
+  assert.equal(bytes[30] | (bytes[31] << 8), 23);
+  assert.equal(bytes[34], 0);
+
+  const restored = makeMachine();
+  applyZ80Snapshot(restored, bytes);
+  assert.equal(restored.cpu.PC, 0);
+  assert.equal(restored.read8(0x4000), 0x11);
+  assert.equal(restored.read8(0x8000), 0x22);
+  assert.equal(restored.read8(0xc000), 0x33);
+});
+
 test("loads a 48K SNA snapshot and restores PC from the stack", () => {
   const bytes = new Uint8Array(27 + 0xc000);
   bytes[0] = 0x3f;
@@ -199,6 +220,38 @@ test("rejects truncated compressed Z80 v1 RAM instead of zero-filling it", () =>
   writeHeader(bytes, { pc: 0x8123, compressed: true });
   bytes.set([0xed, 0xed, 4, 0xaa, 0x00, 0xed, 0xed, 0x00], 30);
   assert.throws(() => parseZ80Snapshot(bytes), /ended before 48K RAM was complete/);
+});
+
+test("accepts only 48K-family extended Z80 hardware modes", () => {
+  const makeExtended = ({ headerLength = 23, hardwareMode = 0, modified = false } = {}) => {
+    const headerSize = 32 + headerLength;
+    const header = new Uint8Array(headerSize);
+    writeHeader(header, { pc: 0 });
+    writeWord(header, 30, headerLength);
+    writeWord(header, 32, 0x9abc);
+    header[34] = hardwareMode;
+    if (modified) header[37] |= 0x80;
+
+    const bytes = new Uint8Array(headerSize + 3 * (3 + 0x4000));
+    bytes.set(header);
+    let offset = headerSize;
+    for (const [page, fill] of [[8, 0x40], [4, 0x80], [5, 0xc0]]) {
+      writeWord(bytes, offset, 0xffff);
+      bytes[offset + 2] = page;
+      bytes.fill(fill, offset + 3, offset + 3 + 0x4000);
+      offset += 3 + 0x4000;
+    }
+    return bytes;
+  };
+
+  assert.equal(parseZ80Snapshot(makeExtended({ headerLength: 23, hardwareMode: 0 })).registers.PC, 0x9abc);
+  assert.equal(parseZ80Snapshot(makeExtended({ headerLength: 54, hardwareMode: 0 })).registers.PC, 0x9abc);
+  assert.throws(() => parseZ80Snapshot(makeExtended({ headerLength: 23, hardwareMode: 1 })), /Interface 1/);
+  assert.throws(() => parseZ80Snapshot(makeExtended({ headerLength: 54, hardwareMode: 3 })), /M\.G\.T\./);
+  assert.throws(() => parseZ80Snapshot(makeExtended({ headerLength: 23, hardwareMode: 3 })), /128K/);
+  assert.throws(() => parseZ80Snapshot(makeExtended({ headerLength: 54, hardwareMode: 4 })), /128K/);
+  assert.throws(() => parseZ80Snapshot(makeExtended({ headerLength: 54, hardwareMode: 2 })), /SamRam/);
+  assert.throws(() => parseZ80Snapshot(makeExtended({ headerLength: 54, hardwareMode: 0, modified: true })), /modified 48K/);
 });
 
 test("rejects truncated and invalid extended Z80 headers", () => {

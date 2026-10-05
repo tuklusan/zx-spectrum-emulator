@@ -9,6 +9,43 @@ const PAGE_TO_RAM_OFFSET = new Map([
   [4, 0x4000],
   [5, 0x8000]
 ]);
+const EXTENDED_HEADER_VERSIONS = new Map([
+  [23, 2],
+  [54, 3],
+  [55, 3]
+]);
+const Z80_HARDWARE_MODES = {
+  2: new Map([
+    [0, "48K"],
+    [1, "48K + Interface 1"],
+    [2, "SamRam"],
+    [3, "128K"],
+    [4, "128K + Interface 1"]
+  ]),
+  3: new Map([
+    [0, "48K"],
+    [1, "48K + Interface 1"],
+    [2, "SamRam"],
+    [3, "48K + M.G.T."],
+    [4, "128K"],
+    [5, "128K + Interface 1"],
+    [6, "128K + M.G.T."],
+    [7, "+3"],
+    [8, "+3"],
+    [9, "Pentagon 128K"],
+    [10, "Scorpion 256K"],
+    [11, "Didaktik-Kompakt"],
+    [12, "+2"],
+    [13, "+2A"],
+    [14, "Timex TC2048"],
+    [15, "Timex TC2068"],
+    [128, "Timex TS2068"]
+  ])
+};
+const Z80_48K_MODES = {
+  2: new Set([0]),
+  3: new Set([0])
+};
 
 function bytesFrom(input) {
   return input instanceof Uint8Array ? input : new Uint8Array(input);
@@ -139,11 +176,20 @@ export function parseZ80Snapshot(input) {
   let pc = headerPc;
   let extendedRamOffset = 0;
   if (!isV1) {
-    if (bytes.length < 34) throw new Error("Z80 extended snapshot header is truncated");
+    if (bytes.length < 38) throw new Error("Z80 extended snapshot header is truncated");
     const extendedHeaderLength = readWord(bytes, 30);
-    if (extendedHeaderLength < 3 || 32 + extendedHeaderLength > bytes.length) {
+    const version = EXTENDED_HEADER_VERSIONS.get(extendedHeaderLength);
+    if (!version || 32 + extendedHeaderLength > bytes.length) {
       throw new Error("Z80 extended snapshot header length is invalid");
     }
+
+    const hardwareMode = bytes[34];
+    const hardwareModified = (bytes[37] & 0x80) !== 0;
+    const hardwareName = Z80_HARDWARE_MODES[version].get(hardwareMode) ?? `mode ${hardwareMode}`;
+    if (hardwareModified || !Z80_48K_MODES[version].has(hardwareMode)) {
+      throw new Error(`Only 48K Z80 snapshots are supported; Z80 v${version} hardware is ${hardwareModified ? "modified " : ""}${hardwareName}`);
+    }
+
     pc = readWord(bytes, 32);
     extendedRamOffset = 32 + extendedHeaderLength;
   }
@@ -241,8 +287,7 @@ export function applySpectrumSnapshot(machine, snapshotOrBytes, extension = "Z80
   return applyZ80Snapshot(machine, snapshot);
 }
 
-export function createZ80Snapshot(machine) {
-  const bytes = new Uint8Array(V1_HEADER_LENGTH + RAM_LENGTH);
+function writeSnapshotHeader(bytes, machine, pc) {
   const cpu = machine.cpu;
   bytes[0] = cpu.A & 0xff;
   bytes[1] = cpu.F & 0xff;
@@ -250,7 +295,7 @@ export function createZ80Snapshot(machine) {
   bytes[3] = cpu.B & 0xff;
   bytes[4] = cpu.L & 0xff;
   bytes[5] = cpu.H & 0xff;
-  writeWord(bytes, 6, cpu.PC);
+  writeWord(bytes, 6, pc);
   writeWord(bytes, 8, cpu.SP);
   bytes[10] = cpu.I & 0xff;
   bytes[11] = cpu.R & 0x7f;
@@ -270,6 +315,32 @@ export function createZ80Snapshot(machine) {
   bytes[27] = cpu.IFF1 ? 1 : 0;
   bytes[28] = cpu.IFF2 ? 1 : 0;
   bytes[29] = cpu.interruptMode & 0x03;
-  bytes.set(machine.ram, V1_HEADER_LENGTH);
+}
+
+export function createZ80Snapshot(machine) {
+  if ((machine.cpu.PC & 0xffff) !== 0) {
+    const bytes = new Uint8Array(V1_HEADER_LENGTH + RAM_LENGTH);
+    writeSnapshotHeader(bytes, machine, machine.cpu.PC);
+    bytes.set(machine.ram, V1_HEADER_LENGTH);
+    return bytes;
+  }
+
+  // PC=0000 is the extended-format sentinel, so a v1 file would describe itself
+  // as the wrong format. Use a plain 48K v2 snapshot instead.
+  const extendedHeaderLength = 23;
+  const headerLength = 32 + extendedHeaderLength;
+  const bytes = new Uint8Array(headerLength + (3 * (3 + PAGE_LENGTH)));
+  writeSnapshotHeader(bytes, machine, 0);
+  writeWord(bytes, 30, extendedHeaderLength);
+  writeWord(bytes, 32, machine.cpu.PC);
+  bytes[34] = 0;
+
+  let offset = headerLength;
+  for (const [page, ramOffset] of [[8, 0x0000], [4, 0x4000], [5, 0x8000]]) {
+    writeWord(bytes, offset, 0xffff);
+    bytes[offset + 2] = page;
+    bytes.set(machine.ram.subarray(ramOffset, ramOffset + PAGE_LENGTH), offset + 3);
+    offset += 3 + PAGE_LENGTH;
+  }
   return bytes;
 }
