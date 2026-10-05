@@ -318,28 +318,24 @@ test("models 48K ULA contention for opcode fetches from display RAM", () => {
   const machine = new Spectrum48({ rom: makeRom() });
   machine.cpu.PC = 0x4000;
   machine.write8(0x4000, 0x00);
-  machine.cpu.tStates = (Spectrum48.DISPLAY_FIRST_LINE * Spectrum48.T_STATES_PER_LINE)
-    + Spectrum48.DISPLAY_FIRST_COLUMN;
+  machine.cpu.tStates = Spectrum48.FIRST_CONTENDED_T_STATE;
   const elapsed = machine.step();
   assert.equal(elapsed, 10);
-  assert.equal(machine.cpu.tStates, (Spectrum48.DISPLAY_FIRST_LINE * Spectrum48.T_STATES_PER_LINE)
-    + Spectrum48.DISPLAY_FIRST_COLUMN + 10);
+  assert.equal(machine.cpu.tStates, Spectrum48.FIRST_CONTENDED_T_STATE + 10);
 });
 
 test("applies ULA contention to later memory accesses within an instruction", () => {
   const machine = new Spectrum48({ rom: makeRom({ 0: 0x7e }) });
   machine.cpu.HL = 0x4000;
   machine.write8(0x4000, 0x5a);
-  machine.cpu.tStates = (Spectrum48.DISPLAY_FIRST_LINE * Spectrum48.T_STATES_PER_LINE)
-    + Spectrum48.DISPLAY_FIRST_COLUMN;
+  machine.cpu.tStates = Spectrum48.FIRST_CONTENDED_T_STATE;
   assert.equal(machine.step(), 9);
   assert.equal(machine.cpu.A, 0x5a);
 });
 
 test("models the four 48K I/O contention cases", () => {
   const machine = new Spectrum48({ rom: makeRom() });
-  const firstContended = (Spectrum48.DISPLAY_FIRST_LINE * Spectrum48.T_STATES_PER_LINE)
-    + Spectrum48.DISPLAY_FIRST_COLUMN - 1;
+  const firstContended = Spectrum48.FIRST_CONTENDED_T_STATE;
 
   const measure = (port) => {
     machine.cpuExecuting = true;
@@ -363,18 +359,21 @@ test("exposes ULA bitmap and attribute fetches on the floating bus", () => {
   const machine = new Spectrum48({ rom: makeRom() });
   machine.write8(0x4000, 0xa5);
   machine.write8(0x5800, 0x47);
-  const active = (Spectrum48.DISPLAY_FIRST_LINE * Spectrum48.T_STATES_PER_LINE)
-    + Spectrum48.DISPLAY_FIRST_COLUMN;
+  const active = Spectrum48.FIRST_FLOATING_BUS_T_STATE;
   assert.equal(machine.readFloatingBus(active), 0xa5);
-  assert.equal(machine.readFloatingBus(active + 2), 0x47);
+  assert.equal(machine.readFloatingBus(active + 1), 0x47);
+  machine.write8(0x4001, 0x5a);
+  machine.write8(0x5801, 0x38);
+  assert.equal(machine.readFloatingBus(active + 2), 0x5a);
+  assert.equal(machine.readFloatingBus(active + 3), 0x38);
+  assert.equal(machine.readFloatingBus(active + 4), 0xff);
   assert.equal(machine.readFloatingBus(0), 0xff);
 });
 
 test("floating-bus ULA reads do not count as CPU memory accesses", () => {
   const machine = new Spectrum48({ rom: makeRom() });
   machine.write8(0x4000, 0xa5);
-  const active = (Spectrum48.DISPLAY_FIRST_LINE * Spectrum48.T_STATES_PER_LINE)
-    + Spectrum48.DISPLAY_FIRST_COLUMN;
+  const active = Spectrum48.FIRST_FLOATING_BUS_T_STATE;
   machine.cpuExecuting = true;
   machine.busTState = active;
   machine.pendingContention = 0;

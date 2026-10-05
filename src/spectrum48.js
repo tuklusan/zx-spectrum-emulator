@@ -68,6 +68,9 @@ export class Spectrum48 {
   static SCANLINES_PER_FRAME = 312;
   static DISPLAY_FIRST_LINE = 64;
   static DISPLAY_FIRST_COLUMN = 128;
+  static FIRST_CONTENDED_T_STATE = 14335;
+  static FIRST_FLOATING_BUS_T_STATE = 14338;
+  static CONTENDED_T_STATES_PER_LINE = 128;
 
   static fromRomFile(path) {
     const readFileSync = globalThis.process?.getBuiltinModule?.("fs")?.readFileSync;
@@ -545,13 +548,20 @@ export class Spectrum48 {
   }
 
   readFloatingBus(tState = this.cpu.tStates) {
-    const raster = this.getRasterPositionAt(tState);
-    if (raster.displayLine < 0 || raster.displayLine >= Spectrum48.SCREEN_HEIGHT) return 0xff;
-    if (raster.displayColumn < 0 || raster.displayColumn >= 128) return 0xff;
-    const xByte = Math.floor(raster.displayColumn / 4);
-    const phase = raster.displayColumn & 0x03;
-    if (phase < 2) return this.peek8(this.screenByteAddress(xByte, raster.displayLine));
-    return this.peek8(0x5800 + ((raster.displayLine >> 3) * 32) + xByte);
+    const tStateInFrame = ((tState % Spectrum48.T_STATES_PER_FRAME)
+      + Spectrum48.T_STATES_PER_FRAME) % Spectrum48.T_STATES_PER_FRAME;
+    const fromFirstFetch = tStateInFrame - Spectrum48.FIRST_FLOATING_BUS_T_STATE;
+    if (fromFirstFetch < 0) return 0xff;
+    const displayLine = Math.floor(fromFirstFetch / Spectrum48.T_STATES_PER_LINE);
+    if (displayLine < 0 || displayLine >= Spectrum48.SCREEN_HEIGHT) return 0xff;
+    const lineTState = fromFirstFetch % Spectrum48.T_STATES_PER_LINE;
+    if (lineTState >= Spectrum48.CONTENDED_T_STATES_PER_LINE) return 0xff;
+
+    const phase = lineTState & 0x07;
+    if (phase >= 4) return 0xff;
+    const xByte = (Math.floor(lineTState / 8) * 2) + (phase >= 2 ? 1 : 0);
+    if ((phase & 0x01) === 0) return this.peek8(this.screenByteAddress(xByte, displayLine));
+    return this.peek8(0x5800 + ((displayLine >> 3) * 32) + xByte);
   }
 
   getRasterPositionAt(tState) {
@@ -576,10 +586,15 @@ export class Spectrum48 {
   }
 
   ulaContentionDelay(tState = this.cpu.tStates) {
-    const raster = this.getRasterPositionAt(tState);
-    if (raster.displayLine < 0 || raster.displayLine >= Spectrum48.SCREEN_HEIGHT) return 0;
-    if (raster.displayColumn < -1 || raster.displayColumn >= 127) return 0;
-    return ULA_CONTENTION_PATTERN[(raster.displayColumn + 1) & 0x07];
+    const tStateInFrame = ((tState % Spectrum48.T_STATES_PER_FRAME)
+      + Spectrum48.T_STATES_PER_FRAME) % Spectrum48.T_STATES_PER_FRAME;
+    const fromFirstContention = tStateInFrame - Spectrum48.FIRST_CONTENDED_T_STATE;
+    if (fromFirstContention < 0) return 0;
+    const displayLine = Math.floor(fromFirstContention / Spectrum48.T_STATES_PER_LINE);
+    if (displayLine < 0 || displayLine >= Spectrum48.SCREEN_HEIGHT) return 0;
+    const lineTState = fromFirstContention % Spectrum48.T_STATES_PER_LINE;
+    if (lineTState >= Spectrum48.CONTENDED_T_STATES_PER_LINE) return 0;
+    return ULA_CONTENTION_PATTERN[lineTState & 0x07];
   }
 
   contentionDelay(address, tState = this.cpu.tStates) {
