@@ -292,11 +292,9 @@ export class Spectrum48 {
 
     if (initialPauseMs > 0) pushInterval(Math.round(initialPauseMs * T_STATES_PER_MS));
     const block = this.tapeBlocks[index];
-    if (block?.checksumValid !== false) {
-      if (block?.generalized) this.appendGeneralizedBlockPulses(appendSymbol, block.generalized);
-      else if (block) this.appendDataBlockPulses(pushPulse, block);
-      if (block?.pauseMs > 0) appendPause(block.pauseMs);
-    }
+    if (block?.generalized) this.appendGeneralizedBlockPulses(appendSymbol, block.generalized);
+    else if (block) this.appendDataBlockPulses(pushPulse, block);
+    if (block?.pauseMs > 0) appendPause(block.pauseMs);
 
     return {
       durations: Uint32Array.from(durations),

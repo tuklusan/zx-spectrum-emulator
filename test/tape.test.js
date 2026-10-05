@@ -131,6 +131,22 @@ test("rejects corrupt TAP checksums", () => {
   assert.throws(() => loadTapEntry(makeMachine(), entry), /checksum/i);
 });
 
+test("bad-checksum tape blocks still produce their physical pulses", () => {
+  const tap = makeTap([dataBlock([0x12, 0x34])]);
+  tap[tap.length - 1] ^= 0xff;
+  const [block] = parseTap(tap);
+  assert.equal(block.checksumValid, false);
+
+  const machine = makeMachine();
+  machine.setTapeBlocks([block]);
+  const sequence = machine.buildTapeBlockPulseSequence(0, 0);
+
+  assert.ok(sequence.durations.length > 0);
+  machine.startTapePlayback();
+  assert.equal(machine.tapePlaying, true);
+  assert.ok(machine.tapePulseDurations.length > 0);
+});
+
 test("parses TZX standard-speed blocks as mountable tape blocks", () => {
   const program = tokenizeBasicLine("10 PRINT \"TZX\"");
   const blocks = parseTzx(makeTzx([
