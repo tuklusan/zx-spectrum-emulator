@@ -214,11 +214,12 @@ test("zero-gap tape blocks do not invent a pause or reset the EAR phase", () => 
   assert.equal(second.levels[0], Number(first.endingLevel));
 });
 
-test("feeds mounted TAP blocks to the ROM tape load routine", () => {
+test("feeds a playing TAP block to the ROM tape load routine", () => {
   const header = headerBlock({ type: 3, name: "CODE", length: 3, param1: 0x8000, param2: 0x8000 });
   const blocks = parseTap(makeTap([header]));
   const machine = makeMachine();
   machine.setTapeBlocks(blocks);
+  machine.startTapePlayback();
   machine.cpu.PC = 0x0556;
   machine.cpu.SP = 0x7000;
   machine.cpu.A = 0x00;
