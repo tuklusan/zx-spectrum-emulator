@@ -42,7 +42,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261006-hate-erbe"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261006-hate-erbe-tap"/);
   assert.match(spectrum, /<title>ZX Spectrum 48K Online Emulator \| JavaScript Web Emulator<\/title>/);
   assert.match(spectrum, /name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"/);
   assert.match(spectrum, /<!-- Open Graph: Facebook, LinkedIn, Discord and other link previews -->/);
