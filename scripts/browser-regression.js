@@ -252,7 +252,6 @@ frame.addEventListener("load", async () => {
     const pc = doc?.querySelector("#pc")?.textContent ?? "(no PC)";
     const frameCount = doc?.querySelector("#frame")?.textContent ?? "(no frame)";
     const border = doc?.querySelector("#border")?.textContent ?? "(no border)";
-    const detail = doc ? topScreenDetailCount(doc) : -1;
     result.dataset.state = "fail";
     result.textContent = "FAIL: " + error.message
       + " | Spectrum: " + status
@@ -260,8 +259,7 @@ frame.addEventListener("load", async () => {
       + " | Label: " + mediaLabel
       + " | PC: " + pc
       + " | Frame: " + frameCount
-      + " | Border: " + border
-      + " | Detail: " + detail;
+      + " | Border: " + border;
   }
 }, { once: true });
 frame.src = initialUrl;

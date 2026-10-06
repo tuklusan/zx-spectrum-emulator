@@ -203,9 +203,13 @@ export class Spectrum48 {
     this.loadTapePlaybackBlock(initialPauseMs, this.cpu.tStates);
   }
 
-  startTapePlaybackFromCursor() {
+  startTapePlaybackFromCursor({ waitForRomLoader = false } = {}) {
     const previousPause = this.tapeCursor > 0 ? this.tapeBlocks[this.tapeCursor - 1]?.pauseMs ?? 0 : 0;
-    this.startTapePlayback({ startIndex: this.tapeCursor, initialPauseMs: previousPause });
+    this.startTapePlayback({
+      startIndex: this.tapeCursor,
+      initialPauseMs: previousPause,
+      waitForRomLoader
+    });
   }
 
   stopTapePlayback() {
@@ -684,8 +688,10 @@ export class Spectrum48 {
     }
 
     this.tapeCursor += 1;
-    if (this.tapeCursor < this.tapeBlocks.length && !this.tapeBlocks[this.tapeCursor].header) {
-      this.startTapePlaybackFromCursor();
+    if (this.tapeCursor < this.tapeBlocks.length) {
+      this.startTapePlaybackFromCursor({
+        waitForRomLoader: Boolean(this.tapeBlocks[this.tapeCursor].header)
+      });
     }
     this.cpu.IX = (destination + block.payload.length) & 0xffff;
     this.cpu.DE = 0;

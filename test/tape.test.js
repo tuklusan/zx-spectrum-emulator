@@ -259,6 +259,50 @@ test("feeds a playing TAP block to the ROM tape load routine", () => {
   );
 });
 
+test("keeps a multi-file TAP armed across data-to-header boundaries", () => {
+  const firstData = [0x11, 0x22];
+  const secondData = [0x33, 0x44, 0x55];
+  const blocks = parseTap(makeTap([
+    headerBlock({ type: 3, name: "ONE", length: firstData.length, param1: 0x8000, param2: 0x8000 }),
+    dataBlock(firstData),
+    headerBlock({ type: 3, name: "TWO", length: secondData.length, param1: 0x9000, param2: 0x9000 }),
+    dataBlock(secondData)
+  ]));
+  const machine = makeMachine();
+  machine.setTapeBlocks(blocks);
+  machine.startTapePlayback();
+
+  const requestLoad = (flag, length, destination, returnAddress) => {
+    machine.cpu.PC = 0x0556;
+    machine.cpu.SP = 0x7000;
+    machine.cpu.A = flag;
+    machine.cpu.IX = destination;
+    machine.cpu.DE = length;
+    machine.write16(machine.cpu.SP, returnAddress);
+    assert.equal(machine.step(), 32);
+  };
+
+  requestLoad(0x00, 17, 0x6000, 0x2000);
+  assert.equal(machine.tapeCursor, 1);
+  assert.equal(machine.tapePlaying, true);
+
+  requestLoad(0xff, firstData.length, 0x8000, 0x2001);
+  assert.equal(machine.tapeCursor, 2);
+  assert.equal(machine.tapePlaying, true);
+  assert.equal(machine.tapeWaitForRomLoader, true);
+
+  requestLoad(0x00, 17, 0x6100, 0x2002);
+  assert.equal(machine.tapeCursor, 3);
+  assert.equal(machine.tapePlaying, true);
+  assert.equal(machine.tapeWaitForRomLoader, false);
+
+  requestLoad(0xff, secondData.length, 0x9000, 0x2003);
+  assert.equal(machine.tapeCursor, 4);
+  assert.equal(machine.tapePlaying, false);
+  assert.deepEqual([machine.read8(0x8000), machine.read8(0x8001)], firstData);
+  assert.deepEqual([machine.read8(0x9000), machine.read8(0x9001), machine.read8(0x9002)], secondData);
+});
+
 test("does not fast-load a mounted cassette while the tape is stopped", () => {
   const header = headerBlock({ type: 3, name: "CODE", length: 3, param1: 0x8000, param2: 0x8000 });
   const blocks = parseTap(makeTap([header]));

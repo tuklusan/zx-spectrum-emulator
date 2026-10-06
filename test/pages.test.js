@@ -100,7 +100,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(browserRegression, /function hateTitleVisible\(doc\)/);
   assert.match(browserRegression, /worldOfSpectrumCompatibilityUrl/);
   assert.match(browserRegression, /\| PC: /);
-  assert.match(browserRegression, /\| Detail: /);
+  assert.match(browserRegression, /\| Border: /);
   assert.match(browserRegression, /black > 40_000 && yellow > 80/);
 });
 
