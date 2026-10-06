@@ -1338,6 +1338,7 @@ mediaUrlLoadButton.addEventListener("click", async () => {
 
   try {
     await replaceSpectrumMedia(rawUrl);
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   } catch (error) {
     if (!isMediaAbort(error)) showMediaError(error);
   }

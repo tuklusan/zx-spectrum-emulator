@@ -42,7 +42,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-url-switch-7"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-url-switch-8"/);
   assert.match(spectrum, /id="audioToggle"[^>]*aria-pressed="true"[^>]*>Sound On<\/button>/);
   assert.match(spectrum, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/index\.html">Machines</);
@@ -228,6 +228,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /mediaUrlLoadButton\.disabled = busy/);
   assert.match(app, /if \(remote\) setMediaUrlBusy\(true\)/);
   assert.match(app, /if \(remote\) setMediaUrlBusy\(false\)/);
+  assert.match(app, /window\.scrollTo\(\{ top: 0, left: 0, behavior: "auto" \}\)/);
   assert.match(app, /REMOTE_MEDIA_FETCH_TIMEOUT_MS = 5_000/);
   assert.match(app, /return await response\.arrayBuffer\(\)/);
   assert.match(app, /targetUrl: attempt\.target/);

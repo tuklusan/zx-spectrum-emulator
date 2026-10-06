@@ -166,6 +166,8 @@ frame.addEventListener("load", async () => {
       "ZX Carrom autoload"
     );
     const input = doc.querySelector("#mediaUrl");
+    frame.contentWindow.scrollTo(0, doc.documentElement.scrollHeight);
+    if (frame.contentWindow.scrollY === 0) throw new Error("Could not move viewport before URL switch test");
     input.value = dreamwalkerUrl;
     const loadButton = doc.querySelector("#mediaUrlLoad");
     loadButton.click();
@@ -191,6 +193,7 @@ frame.addEventListener("load", async () => {
     );
     const mediaStatus = doc.querySelector("#mediaStatus");
     if (!mediaStatus.hidden) throw new Error("media status was not cleared after a successful switch");
+    if (frame.contentWindow.scrollY !== 0) throw new Error("viewport did not return to the top after a successful URL load");
     if (headerPolluted) throw new Error("CORS progress leaked into the Spectrum screen header");
     result.dataset.state = "pass";
     result.textContent = "PASS: ZX Carrom switched to DreamWalker from the real public URL";
