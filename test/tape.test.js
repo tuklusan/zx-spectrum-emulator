@@ -259,7 +259,7 @@ test("feeds a playing TAP block to the ROM tape load routine", () => {
   );
 });
 
-test("keeps a multi-file TAP armed across data-to-header boundaries", () => {
+test("keeps a multi-file TAP armed across ROM header boundaries", () => {
   const firstData = [0x11, 0x22];
   const secondData = [0x33, 0x44, 0x55];
   const blocks = parseTap(makeTap([
@@ -285,6 +285,7 @@ test("keeps a multi-file TAP armed across data-to-header boundaries", () => {
   requestLoad(0x00, 17, 0x6000, 0x2000);
   assert.equal(machine.tapeCursor, 1);
   assert.equal(machine.tapePlaying, true);
+  assert.equal(machine.tapeWaitForRomLoader, true);
 
   requestLoad(0xff, firstData.length, 0x8000, 0x2001);
   assert.equal(machine.tapeCursor, 2);
@@ -294,7 +295,7 @@ test("keeps a multi-file TAP armed across data-to-header boundaries", () => {
   requestLoad(0x00, 17, 0x6100, 0x2002);
   assert.equal(machine.tapeCursor, 3);
   assert.equal(machine.tapePlaying, true);
-  assert.equal(machine.tapeWaitForRomLoader, false);
+  assert.equal(machine.tapeWaitForRomLoader, true);
 
   requestLoad(0xff, secondData.length, 0x9000, 0x2003);
   assert.equal(machine.tapeCursor, 4);

@@ -689,8 +689,9 @@ export class Spectrum48 {
 
     this.tapeCursor += 1;
     if (this.tapeCursor < this.tapeBlocks.length) {
+      const nextBlock = this.tapeBlocks[this.tapeCursor];
       this.startTapePlaybackFromCursor({
-        waitForRomLoader: Boolean(this.tapeBlocks[this.tapeCursor].header)
+        waitForRomLoader: Boolean(block.header || nextBlock.header)
       });
     }
     this.cpu.IX = (destination + block.payload.length) & 0xffff;
