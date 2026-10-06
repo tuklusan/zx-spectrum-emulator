@@ -102,6 +102,23 @@ test("can select one known entry from an otherwise ambiguous ZIP", async () => {
   assert.deepEqual(Buffer.from(media.bytes), tzx);
 });
 
+test("uses a .tzx.zip filename hint to choose the first TZX from a multi-release bundle", async () => {
+  const secondTzx = Buffer.concat([tzx, Buffer.from([0])]);
+  const archive = makeZip([
+    ["H.A.T.E.-original.tap", Buffer.from([1, 0, 0])],
+    ["H.A.T.E.-Gremlin.tzx", tzx],
+    ["H.A.T.E.-Erbe.tzx", secondTzx],
+    ["state.z80", Buffer.alloc(40)]
+  ]);
+  const media = await unwrapSpectrumMedia(
+    archive,
+    "https://www.worldofspectrum.org//pub/sinclair/games/h/H.A.T.E..tzx.zip"
+  );
+  assert.equal(media.type, "tzx");
+  assert.equal(media.name, "H.A.T.E.-Gremlin.tzx");
+  assert.deepEqual(Buffer.from(media.bytes), tzx);
+});
+
 test("rejects an absent preferred ZIP entry cleanly", async () => {
   const archive = makeZip([["game.tzx", tzx], ["game.tap", Buffer.from([1, 0, 0])]]);
   await assert.rejects(

@@ -30,6 +30,19 @@ const viewports = [
   { name: "desktop", width: 1440, height: 1000 }
 ];
 
+const mediaSwitchTargets = [
+  {
+    name: "dreamwalker",
+    url: "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip",
+    labelNeedle: "DreamWalker(48K).tzx.zip"
+  },
+  {
+    name: "hate",
+    url: "https://www.worldofspectrum.org//pub/sinclair/games/h/H.A.T.E..tzx.zip",
+    labelNeedle: "H.A.T.E..tzx.zip"
+  }
+];
+
 const fixtureBodies = new Map();
 
 const contentTypes = new Map([
@@ -58,7 +71,14 @@ function staticServer() {
   return createServer((request, response) => {
     const requestUrl = new URL(request.url, BASE);
     if (requestUrl.pathname === "/__media-switch") {
-      const body = mediaSwitchHarness();
+      const targetName = requestUrl.searchParams.get("target") || "dreamwalker";
+      const target = mediaSwitchTargets.find((candidate) => candidate.name === targetName);
+      if (!target) {
+        response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+        response.end("Unknown media switch target");
+        return;
+      }
+      const body = mediaSwitchHarness(target);
       response.writeHead(200, {
         "content-length": Buffer.byteLength(body),
         "content-type": "text/html; charset=utf-8"
@@ -134,9 +154,8 @@ function directLaunchUrl(fixture) {
   return url.href;
 }
 
-function mediaSwitchHarness() {
+function mediaSwitchHarness(target) {
   const carrom = fixtures.find((fixture) => fixture.name === "carrom");
-  const dreamwalker = fixtures.find((fixture) => fixture.name === "dreamwalker");
   const initialUrl = directLaunchUrl(carrom);
   return `<!doctype html>
 <meta charset="utf-8">
@@ -147,7 +166,9 @@ function mediaSwitchHarness() {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const result = document.querySelector("#result");
 const frame = document.querySelector("#emulator");
-const dreamwalkerUrl = ${JSON.stringify(dreamwalker.sourceUrl)};
+const targetUrl = ${JSON.stringify(target.url)};
+const targetLabel = ${JSON.stringify(target.labelNeedle)};
+const targetName = ${JSON.stringify(target.name)};
 const initialUrl = ${JSON.stringify(initialUrl)};
 async function waitFor(check, timeoutMs, label) {
   const deadline = Date.now() + timeoutMs;
@@ -168,7 +189,7 @@ frame.addEventListener("load", async () => {
     const input = doc.querySelector("#mediaUrl");
     frame.contentWindow.scrollTo(0, doc.documentElement.scrollHeight);
     if (frame.contentWindow.scrollY === 0) throw new Error("Could not move viewport before URL switch test");
-    input.value = dreamwalkerUrl;
+    input.value = targetUrl;
     const loadButton = doc.querySelector("#mediaUrlLoad");
     loadButton.click();
     const mediaStatusAtStart = doc.querySelector("#mediaStatus");
@@ -183,20 +204,20 @@ frame.addEventListener("load", async () => {
         const mediaStatus = doc.querySelector("#mediaStatus");
         if (/CORS bridge/i.test(status)) headerPolluted = true;
         if (!mediaStatus.hidden && mediaStatus.dataset.state === "error") {
-          throw new Error("DreamWalker media error: " + mediaStatus.textContent);
+          throw new Error(targetName + " media error: " + mediaStatus.textContent);
         }
-        return (doc.querySelector("#mediaFileLabel")?.textContent ?? "").includes("DreamWalker(48K).tzx.zip")
+        return (doc.querySelector("#mediaFileLabel")?.textContent ?? "").includes(targetLabel)
           && status === 'Autoload started with LOAD ""';
       },
       55_000,
-      "DreamWalker URL switch"
+      targetName + " URL switch"
     );
     const mediaStatus = doc.querySelector("#mediaStatus");
     if (!mediaStatus.hidden) throw new Error("media status was not cleared after a successful switch");
     if (frame.contentWindow.scrollY !== 0) throw new Error("viewport did not return to the top after a successful URL load");
     if (headerPolluted) throw new Error("CORS progress leaked into the Spectrum screen header");
     result.dataset.state = "pass";
-    result.textContent = "PASS: ZX Carrom switched to DreamWalker from the real public URL";
+    result.textContent = "PASS: ZX Carrom switched to " + targetName + " from the real public URL";
   } catch (error) {
     const doc = frame.contentDocument;
     const status = doc?.querySelector("#status")?.value ?? "(no Spectrum status)";
@@ -338,41 +359,45 @@ try {
     await rm(socialProfile, { recursive: true, force: true });
   }
 
-  const profile = await mkdtemp(join(tmpdir(), "zx-browser-switch-"));
-  const screenshot = join(OUTPUT, "media-switch-dreamwalker-desktop.png");
-  const domPath = join(OUTPUT, "media-switch-dreamwalker-desktop.html");
-  console.log("Browser regression: media-switch-dreamwalker-desktop");
-  try {
-    const { stdout } = await runChrome(chrome, [
-      "--headless=new",
-      "--no-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--hide-scrollbars",
-      "--mute-audio",
-      "--autoplay-policy=no-user-gesture-required",
-      "--disable-background-timer-throttling",
-      "--disable-backgrounding-occluded-windows",
-      "--disable-renderer-backgrounding",
-      "--run-all-compositor-stages-before-draw",
-      "--force-device-scale-factor=1",
-      `--user-data-dir=${profile}`,
-      "--window-size=1440,1000",
-      "--virtual-time-budget=75000",
-      `--screenshot=${screenshot}`,
-      "--dump-dom",
-      new URL("/__media-switch", BASE).href
-    ], 105_000);
-    await writeFile(domPath, stdout);
-    if (!/id="result"[^>]*data-state="pass"/i.test(stdout)) {
-      const result = stdout.match(/<output[^>]*id="result"[^>]*>([^<]*)<\/output>/i)?.[1] ?? "switch result missing";
-      throw new Error(`media switch regression failed: ${result}`);
+  for (const target of mediaSwitchTargets) {
+    const profile = await mkdtemp(join(tmpdir(), "zx-browser-switch-"));
+    const screenshot = join(OUTPUT, `media-switch-${target.name}-desktop.png`);
+    const domPath = join(OUTPUT, `media-switch-${target.name}-desktop.html`);
+    console.log(`Browser regression: media-switch-${target.name}-desktop`);
+    try {
+      const switchUrl = new URL("/__media-switch", BASE);
+      switchUrl.searchParams.set("target", target.name);
+      const { stdout } = await runChrome(chrome, [
+        "--headless=new",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--hide-scrollbars",
+        "--mute-audio",
+        "--autoplay-policy=no-user-gesture-required",
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--run-all-compositor-stages-before-draw",
+        "--force-device-scale-factor=1",
+        `--user-data-dir=${profile}`,
+        "--window-size=1440,1000",
+        "--virtual-time-budget=75000",
+        `--screenshot=${screenshot}`,
+        "--dump-dom",
+        switchUrl.href
+      ], 105_000);
+      await writeFile(domPath, stdout);
+      if (!/id="result"[^>]*data-state="pass"/i.test(stdout)) {
+        const result = stdout.match(/<output[^>]*id="result"[^>]*>([^<]*)<\/output>/i)?.[1] ?? "switch result missing";
+        throw new Error(`${target.name} media switch regression failed: ${result}`);
+      }
+      if (!existsSync(screenshot) || statSync(screenshot).size < 10_000) {
+        throw new Error(`${target.name} media switch screenshot was not created correctly`);
+      }
+    } finally {
+      await rm(profile, { recursive: true, force: true });
     }
-    if (!existsSync(screenshot) || statSync(screenshot).size < 10_000) {
-      throw new Error("media switch screenshot was not created correctly");
-    }
-  } finally {
-    await rm(profile, { recursive: true, force: true });
   }
 } finally {
   await new Promise((resolveClose) => server.close(resolveClose));

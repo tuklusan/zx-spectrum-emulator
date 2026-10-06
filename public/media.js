@@ -181,6 +181,18 @@ function candidateEntries(entries) {
   });
 }
 
+function archiveMediaHint(label) {
+  let pathname = String(label ?? "").trim();
+  try {
+    pathname = new URL(pathname, "https://example.invalid/").pathname;
+  } catch {
+    // A local filename is already good enough.
+  }
+  const filename = pathname.split(/[\\/]/).pop()?.toLowerCase() ?? "";
+  const match = filename.match(/\.([a-z0-9]+)\.zip$/);
+  return match && SUPPORTED_MEDIA_TYPES.has(match[1]) ? match[1] : null;
+}
+
 export async function unwrapSpectrumMedia(input, label = "media", depth = 0, preferredEntryName = null) {
   const bytes = bytesFrom(input);
   const type = detectSpectrumMediaType(bytes, label);
@@ -194,6 +206,12 @@ export async function unwrapSpectrumMedia(input, label = "media", depth = 0, pre
     const preferred = candidates.find((entry) => entry.name.toLowerCase() === wanted);
     if (!preferred) throw new Error(`ZIP does not contain expected Spectrum file ${preferredEntryName}`);
     candidates = [preferred];
+  } else if (candidates.length > 1) {
+    const hintedType = archiveMediaHint(label);
+    if (hintedType) {
+      const hinted = candidates.filter((entry) => extensionFromLabel(entry.name) === hintedType);
+      if (hinted.length > 0) candidates = [hinted[0]];
+    }
   }
   if (candidates.length === 0) {
     throw new Error("ZIP contains no supported Spectrum media (TAP, TZX, SNA, Z80 or RZX)");

@@ -42,7 +42,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-url-switch-8"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261006-wos-bundles"/);
   assert.match(spectrum, /<title>ZX Spectrum 48K Online Emulator \| JavaScript Web Emulator<\/title>/);
   assert.match(spectrum, /name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"/);
   assert.match(spectrum, /<!-- Open Graph: Facebook, LinkedIn, Discord and other link previews -->/);
@@ -95,6 +95,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   const browserRegression = await readFile("scripts/browser-regression.js", "utf8");
   assert.match(browserRegression, /zx-spectrum-emulator-social\.png/);
   assert.match(browserRegression, /--window-size=1200,630/);
+  assert.match(browserRegression, /H\.A\.T\.E\.\.tzx\.zip/);
 });
 
 test("Spectrum viewer is play-first and keeps advanced tools dormant by default", async () => {
@@ -197,6 +198,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /parseRzx\(input\)/);
   assert.match(app, /new RzxPlayback\(machine, recording\)/);
   assert.match(app, /unwrapSpectrumMedia/);
+  assert.match(app, /media\.js\?v=20261006-archive-format-hint/);
   assert.match(app, /async function loadSpectrumMedia\(/);
   assert.match(app, /function beginMediaRequest\(\)/);
   assert.match(app, /mediaRequestController\?\.abort\(\)/);

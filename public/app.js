@@ -9,7 +9,7 @@ import {
 import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
-import { unwrapSpectrumMedia } from "./media.js?v=20261005-archive-choice";
+import { unwrapSpectrumMedia } from "./media.js?v=20261006-archive-format-hint";
 import { mediaRelayUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl } from "./tape-url.js?v=20261005-url-switch-7";
 
 const canvas = document.querySelector("#screen");
