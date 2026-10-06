@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { extname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { detokenizeBasicProgram } from "../public/basic.js";
 import { unwrapSpectrumMedia } from "../public/media.js";
 import { parseTapeFile } from "../public/tape.js";
 import { worldOfSpectrumCompatibilityUrl } from "../public/tape-url.js";
@@ -341,6 +342,12 @@ const hateTarget = mediaSwitchTargets.find((target) => target.name === "hate");
     return bits.join("/");
   }).join(", ");
   console.log("H.A.T.E. tape probe: " + media.name + " | " + blocks.length + " blocks | " + summary);
+  if (blocks[0]?.header?.type === 0 && blocks[1]?.payload) {
+    console.log("H.A.T.E. BASIC loader: " + JSON.stringify(detokenizeBasicProgram(blocks[1].payload)));
+  }
+  if (blocks[5]?.payload) {
+    console.log("H.A.T.E. 50-byte loader: " + Array.from(blocks[5].payload, (byte) => byte.toString(16).padStart(2, "0")).join(""));
+  }
 }
 const chrome = findChrome();
 const server = staticServer();
