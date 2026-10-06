@@ -42,7 +42,7 @@ const mediaSwitchTargets = [
     name: "hate",
     url: "https://www.worldofspectrum.org//pub/sinclair/games/h/H.A.T.E..tzx.zip",
     labelNeedle: "H.A.T.E..tzx.zip",
-    requireTopScreenActivity: true
+    screenProof: "hate-title"
   }
 ];
 
@@ -172,7 +172,7 @@ const frame = document.querySelector("#emulator");
 const targetUrl = ${JSON.stringify(target.url)};
 const targetLabel = ${JSON.stringify(target.labelNeedle)};
 const targetName = ${JSON.stringify(target.name)};
-const requireTopScreenActivity = ${JSON.stringify(Boolean(target.requireTopScreenActivity))};
+const screenProof = ${JSON.stringify(target.screenProof ?? null)};
 const initialUrl = ${JSON.stringify(initialUrl)};
 async function waitFor(check, timeoutMs, label) {
   const deadline = Date.now() + timeoutMs;
@@ -182,23 +182,19 @@ async function waitFor(check, timeoutMs, label) {
   }
   throw new Error("Timed out waiting for " + label);
 }
-function topScreenDetailCount(doc) {
+function hateTitleVisible(doc) {
   const canvas = doc.querySelector("#screen");
   const context = canvas?.getContext("2d");
-  if (!context) return 0;
-  const image = context.getImageData(32, 24, 256, 120);
-  const data = image.data;
-  const baseR = data[0] ?? 0;
-  const baseG = data[1] ?? 0;
-  const baseB = data[2] ?? 0;
-  let detailed = 0;
+  if (!context) return false;
+  const data = context.getImageData(32, 24, 256, 192).data;
+  let black = 0;
+  let yellow = 0;
   for (let offset = 0; offset < data.length; offset += 4) {
-    const difference = Math.abs(data[offset] - baseR)
-      + Math.abs(data[offset + 1] - baseG)
-      + Math.abs(data[offset + 2] - baseB);
-    if (difference > 48) detailed += 1;
+    const r = data[offset], g = data[offset + 1], b = data[offset + 2];
+    if (r < 24 && g < 24 && b < 24) black += 1;
+    if (r > 180 && g > 180 && b < 96) yellow += 1;
   }
-  return detailed;
+  return black > 40_000 && yellow > 80;
 }
 frame.addEventListener("load", async () => {
   try {
@@ -237,11 +233,11 @@ frame.addEventListener("load", async () => {
     const mediaStatus = doc.querySelector("#mediaStatus");
     if (!mediaStatus.hidden) throw new Error("media status was not cleared after a successful switch");
     if (frame.contentWindow.scrollY !== 0) throw new Error("viewport did not return to the top after a successful URL load");
-    if (requireTopScreenActivity) {
+    if (screenProof === "hate-title") {
       await waitFor(
-        () => topScreenDetailCount(doc) > 500,
+        () => hateTitleVisible(doc),
         45_000,
-        targetName + " tape to get beyond the ROM header"
+        "H.A.T.E. title screen"
       );
     }
     if (headerPolluted) throw new Error("CORS progress leaked into the Spectrum screen header");

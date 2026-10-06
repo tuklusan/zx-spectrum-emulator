@@ -96,6 +96,9 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(browserRegression, /zx-spectrum-emulator-social\.png/);
   assert.match(browserRegression, /--window-size=1200,630/);
   assert.match(browserRegression, /H\.A\.T\.E\.\.tzx\.zip/);
+  assert.match(browserRegression, /screenProof: "hate-title"/);
+  assert.match(browserRegression, /function hateTitleVisible\(doc\)/);
+  assert.match(browserRegression, /black > 40_000 && yellow > 80/);
 });
 
 test("Spectrum viewer is play-first and keeps advanced tools dormant by default", async () => {
