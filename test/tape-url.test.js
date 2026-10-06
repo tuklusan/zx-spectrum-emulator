@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { allOriginsRawUrl, corsLolUrl, corsShUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "../public/tape-url.js";
+import { allOriginsRawUrl, codeTabsUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "../public/tape-url.js";
 
 test("rewrites GitHub blob links to raw file URLs", () => {
   assert.equal(normalizeTapeUrl("https://github.com/tuklusan/ZX-Carrom/blob/main/dist/zxcarrom.tzx","https://tuklusan.github.io/zx-spectrum-emulator/"),
@@ -67,16 +67,12 @@ test("keeps non-ZXDB Spectrum Computing URLs on their original host", () => {
 });
 
 
-test("builds a cors.sh streaming fallback without changing the target URL", () => {
+test("builds a CodeTabs fallback without changing the target URL", () => {
   const target = "https://example.com/games/Hello World.tzx?x=1&y=2";
-  assert.equal(corsShUrl(target), "https://proxy.cors.sh/" + new URL(target).href);
-});
-
-test("builds a cors.lol fallback without changing the target URL", () => {
-  const target = "https://example.com/games/Hello World.tzx?x=1&y=2";
-  const proxied = new URL(corsLolUrl(target));
-  assert.equal(proxied.origin, "https://api.cors.lol");
-  assert.equal(proxied.searchParams.get("url"), new URL(target).href);
+  const proxied = new URL(codeTabsUrl(target));
+  assert.equal(proxied.origin, "https://api.codetabs.com");
+  assert.equal(proxied.pathname, "/v1/proxy");
+  assert.equal(proxied.searchParams.get("quest"), new URL(target).href);
 });
 
 test("builds an AllOrigins raw fallback without changing the target URL", () => {
@@ -88,7 +84,6 @@ test("builds an AllOrigins raw fallback without changing the target URL", () => 
 });
 
 test("rejects non-web URLs for the CORS bridges", () => {
-  assert.throws(() => corsShUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
-  assert.throws(() => corsLolUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
+  assert.throws(() => codeTabsUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
   assert.throws(() => allOriginsRawUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
 });

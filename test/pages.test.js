@@ -42,7 +42,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-url-switch-2"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-url-switch-3"/);
   assert.match(spectrum, /id="audioToggle"[^>]*aria-pressed="true"[^>]*>Sound On<\/button>/);
   assert.match(spectrum, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/index\.html">Machines</);
@@ -215,13 +215,12 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.ok(autoloadFunction.indexOf("setTapeCursor(0)") < autoloadFunction.indexOf("startTapePlayback"));
   const loadMediaFunction = app.slice(app.indexOf("async function loadSpectrumMedia"), app.indexOf("async function replaceSpectrumMedia"));
   assert.match(app, /async function fetchRemoteMedia/);
-  assert.match(app, /corsShUrl\(target\)/);
-  assert.match(app, /corsLolUrl\(target\)/);
+  assert.match(app, /codeTabsUrl\(target\)/);
   assert.match(app, /allOriginsRawUrl\(target\)/);
   assert.match(app, /spectrumComputingMirrorUrl\(url\)/);
   assert.match(app, /Direct media fetch blocked; retrying through CORS bridge/);
   assert.match(app, /showMediaNotice\("Fetching media from " \+ resolvedUrl\)/);
-  assert.match(app, /REMOTE_MEDIA_FETCH_TIMEOUT_MS = 8_000/);
+  assert.match(app, /REMOTE_MEDIA_FETCH_TIMEOUT_MS = 5_000/);
   assert.match(app, /return await response\.arrayBuffer\(\)/);
   assert.match(loadMediaFunction, /sourceLabel = resolvedUrl/);
   const mediaAudioGateIndex = loadMediaFunction.indexOf("waitForAutoloadAudioGesture");

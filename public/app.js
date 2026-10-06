@@ -10,7 +10,7 @@ import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
 import { unwrapSpectrumMedia } from "./media.js?v=20261005-unified-media";
-import { allOriginsRawUrl, corsLolUrl, corsShUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "./tape-url.js?v=20261005-url-switch-2";
+import { allOriginsRawUrl, codeTabsUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "./tape-url.js?v=20261005-url-switch-3";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
@@ -75,7 +75,7 @@ let machine;
 let audio;
 let audioEnabled = true;
 const TAPE_TURBO_BUDGET_MS = 8;
-const REMOTE_MEDIA_FETCH_TIMEOUT_MS = 8_000;
+const REMOTE_MEDIA_FETCH_TIMEOUT_MS = 5_000;
 const SPECTRUM_FRAME_MS = 20;
 const MAX_FRAME_CATCHUP = 5;
 let running = true;
@@ -624,22 +624,16 @@ async function fetchRemoteMedia(url, signal) {
       notice: targetIndex === 0 ? null : "Trying backup media host"
     });
     attempts.push({
-      url: corsShUrl(target),
+      url: codeTabsUrl(target),
       notice: targetIndex === 0
         ? "Direct media fetch blocked; retrying through CORS bridge"
         : "Trying backup media host through CORS bridge"
     });
     attempts.push({
-      url: corsLolUrl(target),
+      url: allOriginsRawUrl(target),
       notice: targetIndex === 0
         ? "First CORS bridge failed; trying another"
         : "Backup media host: trying another CORS bridge"
-    });
-    attempts.push({
-      url: allOriginsRawUrl(target),
-      notice: targetIndex === 0
-        ? "Second CORS bridge failed; trying one more"
-        : "Backup media host: trying one more CORS bridge"
     });
   }
 
