@@ -181,14 +181,20 @@ function candidateEntries(entries) {
   });
 }
 
-export async function unwrapSpectrumMedia(input, label = "media", depth = 0) {
+export async function unwrapSpectrumMedia(input, label = "media", depth = 0, preferredEntryName = null) {
   const bytes = bytesFrom(input);
   const type = detectSpectrumMediaType(bytes, label);
   if (type !== "zip") return { bytes: Uint8Array.from(bytes), type, name: label, archive: null };
   if (depth >= MAX_ZIP_DEPTH) throw new Error("ZIP nesting is too deep");
 
   const archive = readZipDirectory(bytes);
-  const candidates = candidateEntries(archive.entries);
+  let candidates = candidateEntries(archive.entries);
+  if (preferredEntryName) {
+    const wanted = preferredEntryName.toLowerCase();
+    const preferred = candidates.find((entry) => entry.name.toLowerCase() === wanted);
+    if (!preferred) throw new Error(`ZIP does not contain expected Spectrum file ${preferredEntryName}`);
+    candidates = [preferred];
+  }
   if (candidates.length === 0) {
     throw new Error("ZIP contains no supported Spectrum media (TAP, TZX, SNA, Z80 or RZX)");
   }
@@ -202,7 +208,7 @@ export async function unwrapSpectrumMedia(input, label = "media", depth = 0) {
   const unpacked = await extractZipEntry(archive, entry);
   const childType = detectSpectrumMediaType(unpacked, entry.name);
   if (childType === "zip") {
-    const nested = await unwrapSpectrumMedia(unpacked, entry.name, depth + 1);
+    const nested = await unwrapSpectrumMedia(unpacked, entry.name, depth + 1, preferredEntryName);
     return { ...nested, archive: label };
   }
   return { bytes: unpacked, type: childType, name: entry.name, archive: label };

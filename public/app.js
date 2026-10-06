@@ -9,8 +9,8 @@ import {
 import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
-import { unwrapSpectrumMedia } from "./media.js?v=20261005-unified-media";
-import { allOriginsRawUrl, corsDevUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherUrl } from "./tape-url.js?v=20261005-url-switch-5";
+import { unwrapSpectrumMedia } from "./media.js?v=20261005-archive-choice";
+import { allOriginsRawUrl, corsDevUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl } from "./tape-url.js?v=20261005-url-switch-6";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
@@ -621,6 +621,7 @@ async function fetchRemoteMedia(url, signal) {
 
   for (const [targetIndex, target] of targets.entries()) {
     attempts.push({
+      target,
       url: target,
       notice: targetIndex === 0
         ? null
@@ -629,12 +630,14 @@ async function fetchRemoteMedia(url, signal) {
           : "Trying backup media host"
     });
     attempts.push({
+      target,
       url: corsDevUrl(target),
       notice: targetIndex === 0
         ? "Direct media fetch blocked; retrying through CORS bridge"
         : "Trying backup media host through CORS bridge"
     });
     attempts.push({
+      target,
       url: allOriginsRawUrl(target),
       notice: targetIndex === 0
         ? "First CORS bridge failed; trying another"
@@ -646,7 +649,10 @@ async function fetchRemoteMedia(url, signal) {
   for (const attempt of attempts) {
     if (attempt.notice) showMediaNotice(attempt.notice);
     try {
-      return await fetchRemoteMediaAttempt(attempt.url, signal);
+      return {
+        bytes: await fetchRemoteMediaAttempt(attempt.url, signal),
+        targetUrl: attempt.target
+      };
     } catch (error) {
       if (signal?.aborted) throw error;
       lastFailure = error;
@@ -669,11 +675,16 @@ async function loadSpectrumMedia(source, {
   let input = source;
   let sourceLabel = label;
   let resolvedUrl = null;
+  let preferredEntryName = null;
 
   if (typeof source === "string") {
     resolvedUrl = normalizeRemoteFileUrl(source, window.location.href, "Media");
     showMediaNotice("Fetching media from " + resolvedUrl);
-    input = await fetchRemoteMedia(resolvedUrl, request?.controller.signal);
+    const fetched = await fetchRemoteMedia(resolvedUrl, request?.controller.signal);
+    input = fetched.bytes;
+    if (fetched.targetUrl === spectrumComputingPublisherUrl(resolvedUrl)) {
+      preferredEntryName = spectrumComputingPublisherEntry(resolvedUrl);
+    }
     // A proxy URL has no useful filename. Keep the original target for type detection.
     sourceLabel = resolvedUrl;
   } else if (source && typeof source.arrayBuffer === "function") {
@@ -682,7 +693,7 @@ async function loadSpectrumMedia(source, {
   }
 
   if (request) assertCurrentMediaRequest(request);
-  const media = await unwrapSpectrumMedia(input, sourceLabel);
+  const media = await unwrapSpectrumMedia(input, sourceLabel, 0, preferredEntryName);
   if (request) assertCurrentMediaRequest(request);
   const displayLabel = displayMediaName(media);
   if (requireTape && media.type !== "tap" && media.type !== "tzx") {

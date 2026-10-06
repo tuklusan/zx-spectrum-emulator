@@ -85,6 +85,31 @@ test("unwraps deflated Spectrum media", async () => {
   assert.deepEqual(Buffer.from(media.bytes), tzx);
 });
 
+test("can select one known entry from an otherwise ambiguous ZIP", async () => {
+  const archive = makeZip([
+    ["v1.0/Spectrum-48/DreamWalker48.tap", Buffer.from([1, 0, 0])],
+    ["v1.0/Spectrum-48/DreamWalker48.tzx", tzx],
+    ["v1.0/Spectrum-128/DreamWalker.tzx", Buffer.concat([tzx, Buffer.from([1])])]
+  ]);
+  const media = await unwrapSpectrumMedia(
+    archive,
+    "dreamwalker.zip",
+    0,
+    "v1.0/Spectrum-48/DreamWalker48.tzx"
+  );
+  assert.equal(media.type, "tzx");
+  assert.equal(media.name, "v1.0/Spectrum-48/DreamWalker48.tzx");
+  assert.deepEqual(Buffer.from(media.bytes), tzx);
+});
+
+test("rejects an absent preferred ZIP entry cleanly", async () => {
+  const archive = makeZip([["game.tzx", tzx], ["game.tap", Buffer.from([1, 0, 0])]]);
+  await assert.rejects(
+    () => unwrapSpectrumMedia(archive, "bundle.zip", 0, "missing.tzx"),
+    /does not contain expected Spectrum file/
+  );
+});
+
 test("rejects ambiguous and empty ZIP archives cleanly", async () => {
   await assert.rejects(
     () => unwrapSpectrumMedia(makeZip([

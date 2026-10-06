@@ -19,6 +19,16 @@ export function normalizeTapeUrl(value, baseUrl = globalThis.location?.href ?? "
   return normalizeRemoteFileUrl(value, baseUrl, "Tape");
 }
 
+export function spectrumComputingPublisherEntry(value) {
+  const target = new URL(String(value ?? "").trim());
+  const hostname = target.hostname.toLowerCase();
+  if ((hostname === "spectrumcomputing.co.uk" || hostname === "www.spectrumcomputing.co.uk")
+      && target.pathname === "/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip") {
+    return "dreamwalker/v1.0/Spectrum-48/DreamWalker48.tzx";
+  }
+  return null;
+}
+
 export function spectrumComputingPublisherUrl(value) {
   const target = new URL(String(value ?? "").trim());
   const hostname = target.hostname.toLowerCase();
