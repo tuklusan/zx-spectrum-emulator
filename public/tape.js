@@ -98,8 +98,15 @@ function decodeTapeBlock(raw, index, source = "TAP", pauseMs = null, timing = nu
     length: raw.length, pauseMs, flag, payload, checksum,
     checksumValid: checksumFor(raw) === 0,
     header: flag === 0x00 ? decodeHeader(payload) : null,
-    timing, generalized: null, fastLoadable: source === "TAP"
+    timing, generalized: null, fastLoadable: true
   };
+}
+
+function headerNeedsExactPlayback(header) {
+  if (!header) return false;
+  if (header.type < 0 || header.type >= HEADER_TYPES.length) return true;
+  return Array.from(header.name, (char) => char.charCodeAt(0))
+    .some((code) => code < 0x20 || code > 0x7e);
 }
 
 function requireBytes(bytes, offset, length, message) {
@@ -384,6 +391,12 @@ export function parseTzx(input) {
     } else {
       const name = TZX_BLOCK_NAMES.get(id);
       throw new Error("Unsupported TZX block 0x" + id.toString(16).padStart(2, "0") + (name ? " (" + name + ")" : ""));
+    }
+  }
+
+  if (blocks.some((block) => headerNeedsExactPlayback(block.header))) {
+    for (const block of blocks) {
+      if (block.fastLoadable === true) block.fastLoadable = false;
     }
   }
   return blocks;

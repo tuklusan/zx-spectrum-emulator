@@ -160,7 +160,7 @@ test("parses TZX standard-speed blocks as mountable tape blocks", () => {
   assert.equal(blocks.length, 3);
   assert.equal(blocks[0].source, "TZX");
   assert.equal(blocks[0].pauseMs, 1000);
-  assert.equal(blocks[0].fastLoadable, false);
+  assert.equal(blocks[0].fastLoadable, true);
   assert.equal(blocks[2].flag, 0xff);
   assert.equal(entries.length, 1);
   assert.equal(entries[0].header.name, "TZXTEST");
@@ -175,6 +175,23 @@ test("detects TZX files through the generic tape parser", () => {
   assert.equal(blocks.length, 1);
   assert.equal(blocks[0].source, "TZX");
   assert.equal(blocks[0].pauseMs, 500);
+});
+
+test("replays TZX timing exactly when a header uses control codes", () => {
+  const loader = tokenizeBasicLine("10 RANDOMIZE USR 32768");
+  const blocks = parseTzx(makeTzx([
+    standardTzxBlock(headerBlock({
+      name: "\x16\x01\x00 HATE",
+      length: loader.length,
+      param1: 10,
+      param2: loader.length
+    }).slice(2), 985),
+    standardTzxBlock(dataBlock(loader).slice(2), 7629),
+    turboTzxBlock(dataBlock([0x3e, 0x42, 0xc9]).slice(2), { pilotCount: 240, pauseMs: 10310 })
+  ]));
+
+  assert.equal(blocks[0].header.name.startsWith("\x16\x01\x00"), true);
+  assert.deepEqual(blocks.map((block) => block.fastLoadable), [false, false, false]);
 });
 
 test("preserves TZX pause and stop-tape control blocks", () => {
@@ -431,7 +448,7 @@ test("names unsupported TZX signal blocks precisely", () => {
 test("parses TZX turbo blocks with their recorded timings", () => {
   const blocks = parseTzx(makeTzx([turboTzxBlock(dataBlock([0x80]).slice(2), { pilotCount: 2420, pauseMs: 0 })]));
   assert.equal(blocks[0].type, "turbo");
-  assert.equal(blocks[0].fastLoadable, false);
+  assert.equal(blocks[0].fastLoadable, true);
   assert.equal(blocks[0].timing.pilotPulse, 2168);
   assert.equal(blocks[0].timing.pilotCount, 2420);
   assert.equal(blocks[0].timing.zero, 855);
