@@ -10,7 +10,7 @@ import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
 import { unwrapSpectrumMedia } from "./media.js?v=20261006-archive-format-hint";
-import { mediaRelayUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl } from "./tape-url.js?v=20261005-url-switch-7";
+import { mediaRelayUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl, worldOfSpectrumCompatibilityUrl } from "./tape-url.js?v=20261006-wos-compat";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
@@ -615,11 +615,17 @@ async function fetchRemoteMediaAttempt(url, signal) {
 
 async function fetchRemoteMedia(url, signal) {
   const publisherUrl = spectrumComputingPublisherUrl(url);
+  const compatibilityUrl = worldOfSpectrumCompatibilityUrl(url);
   const mirrorUrl = spectrumComputingMirrorUrl(url);
   const relayTarget = publisherUrl || url;
-  const attempts = [
-    { target: url, url, notice: null }
-  ];
+  const attempts = [];
+
+  if (compatibilityUrl) {
+    attempts.push({ target: compatibilityUrl, url: compatibilityUrl, notice: "Please wait… using the compatible tape copy" });
+    attempts.push({ target: compatibilityUrl, url: mediaRelayUrl(compatibilityUrl), notice: "Please wait… fetching the compatible tape through the backup relay" });
+  }
+
+  attempts.push({ target: url, url, notice: null });
 
   if (publisherUrl && publisherUrl !== url) {
     attempts.push({

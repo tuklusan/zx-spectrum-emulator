@@ -39,6 +39,17 @@ export function spectrumComputingPublisherUrl(value) {
   return null;
 }
 
+export function worldOfSpectrumCompatibilityUrl(value) {
+  const target = new URL(String(value ?? "").trim());
+  const hostname = target.hostname.toLowerCase();
+  if ((hostname === "worldofspectrum.org" || hostname === "www.worldofspectrum.org")
+      && target.pathname.replace(/\/{2,}/g, "/") === "/pub/sinclair/games/h/H.A.T.E..tzx.zip") {
+    target.pathname = "/pub/sinclair/games/h/H.A.T.E..tap.zip";
+    return target.href;
+  }
+  return null;
+}
+
 export function spectrumComputingMirrorUrl(value) {
   const target = new URL(String(value ?? "").trim());
   const hostname = target.hostname.toLowerCase();

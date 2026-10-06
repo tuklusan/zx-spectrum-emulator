@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mediaRelayUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl } from "../public/tape-url.js";
+import { mediaRelayUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl, worldOfSpectrumCompatibilityUrl } from "../public/tape-url.js";
 
 test("rewrites GitHub blob links to raw file URLs", () => {
   assert.equal(normalizeTapeUrl("https://github.com/tuklusan/ZX-Carrom/blob/main/dist/zxcarrom.tzx","https://tuklusan.github.io/zx-spectrum-emulator/"),
@@ -107,4 +107,9 @@ test("builds the project media relay URL without changing the target URL", () =>
 
 test("rejects non-web URLs for the media relay", () => {
   assert.throws(() => mediaRelayUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
+});
+
+test("uses the companion TAP for the protected H.A.T.E. World of Spectrum TZX", () => {
+  assert.equal(worldOfSpectrumCompatibilityUrl("https://www.worldofspectrum.org//pub/sinclair/games/h/H.A.T.E..tzx.zip"), "https://www.worldofspectrum.org/pub/sinclair/games/h/H.A.T.E..tap.zip");
+  assert.equal(worldOfSpectrumCompatibilityUrl("https://www.worldofspectrum.org//pub/sinclair/games/f/FairlightII(ErbeSoftwareS.A.).tzx.zip"), null);
 });

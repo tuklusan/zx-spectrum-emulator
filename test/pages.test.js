@@ -235,6 +235,8 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   const loadMediaFunction = app.slice(app.indexOf("async function loadSpectrumMedia"), app.indexOf("async function replaceSpectrumMedia"));
   assert.match(app, /async function fetchRemoteMedia/);
   assert.match(app, /mediaRelayUrl\(relayTarget\)/);
+  assert.match(app, /worldOfSpectrumCompatibilityUrl\(url\)/);
+  assert.match(app, /using the compatible tape copy/);
   assert.match(app, /spectrumComputingPublisherUrl\(url\)/);
   assert.match(app, /spectrumComputingPublisherEntry\(resolvedUrl\)/);
   assert.match(app, /spectrumComputingMirrorUrl\(url\)/);
