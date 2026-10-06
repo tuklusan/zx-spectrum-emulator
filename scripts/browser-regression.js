@@ -6,6 +6,7 @@ import { extname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { unwrapSpectrumMedia } from "../public/media.js";
 import { parseTapeFile } from "../public/tape.js";
+import { worldOfSpectrumCompatibilityUrl } from "../public/tape-url.js";
 
 const ROOT = resolve("dist");
 const OUTPUT = resolve("browser-regression-artifacts");
@@ -248,11 +249,19 @@ frame.addEventListener("load", async () => {
     const status = doc?.querySelector("#status")?.value ?? "(no Spectrum status)";
     const mediaStatus = doc?.querySelector("#mediaStatus")?.textContent ?? "(no media status)";
     const mediaLabel = doc?.querySelector("#mediaFileLabel")?.textContent ?? "(no media label)";
+    const pc = doc?.querySelector("#pc")?.textContent ?? "(no PC)";
+    const frameCount = doc?.querySelector("#frame")?.textContent ?? "(no frame)";
+    const border = doc?.querySelector("#border")?.textContent ?? "(no border)";
+    const detail = doc ? topScreenDetailCount(doc) : -1;
     result.dataset.state = "fail";
     result.textContent = "FAIL: " + error.message
       + " | Spectrum: " + status
       + " | Media: " + mediaStatus
-      + " | Label: " + mediaLabel;
+      + " | Label: " + mediaLabel
+      + " | PC: " + pc
+      + " | Frame: " + frameCount
+      + " | Border: " + border
+      + " | Detail: " + detail;
   }
 }, { once: true });
 frame.src = initialUrl;
@@ -307,12 +316,13 @@ for (const fixture of fixtures) {
 }
 const hateTarget = mediaSwitchTargets.find((target) => target.name === "hate");
 {
+  const hateProbeUrl = worldOfSpectrumCompatibilityUrl(hateTarget.url) || hateTarget.url;
   const relay = new URL("https://zx-spectrum-emulator.vagabondcouple.workers.dev/media");
-  relay.searchParams.set("url", hateTarget.url);
+  relay.searchParams.set("url", hateProbeUrl);
   const response = await fetch(relay, { signal: AbortSignal.timeout(15_000) });
   if (!response.ok) throw new Error("H.A.T.E. tape probe failed: HTTP " + response.status);
   const archiveBytes = new Uint8Array(await response.arrayBuffer());
-  const media = await unwrapSpectrumMedia(archiveBytes, hateTarget.url);
+  const media = await unwrapSpectrumMedia(archiveBytes, hateProbeUrl);
   const blocks = parseTapeFile(media.bytes);
   const summary = blocks.slice(0, 40).map((block, index) => {
     const bits = [index + ":" + block.type];
