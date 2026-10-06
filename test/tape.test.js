@@ -160,6 +160,7 @@ test("parses TZX standard-speed blocks as mountable tape blocks", () => {
   assert.equal(blocks.length, 3);
   assert.equal(blocks[0].source, "TZX");
   assert.equal(blocks[0].pauseMs, 1000);
+  assert.equal(blocks[0].fastLoadable, false);
   assert.equal(blocks[2].flag, 0xff);
   assert.equal(entries.length, 1);
   assert.equal(entries[0].header.name, "TZXTEST");
@@ -430,6 +431,7 @@ test("names unsupported TZX signal blocks precisely", () => {
 test("parses TZX turbo blocks with their recorded timings", () => {
   const blocks = parseTzx(makeTzx([turboTzxBlock(dataBlock([0x80]).slice(2), { pilotCount: 2420, pauseMs: 0 })]));
   assert.equal(blocks[0].type, "turbo");
+  assert.equal(blocks[0].fastLoadable, false);
   assert.equal(blocks[0].timing.pilotPulse, 2168);
   assert.equal(blocks[0].timing.pilotCount, 2420);
   assert.equal(blocks[0].timing.zero, 855);

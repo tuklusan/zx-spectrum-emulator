@@ -98,7 +98,7 @@ function decodeTapeBlock(raw, index, source = "TAP", pauseMs = null, timing = nu
     length: raw.length, pauseMs, flag, payload, checksum,
     checksumValid: checksumFor(raw) === 0,
     header: flag === 0x00 ? decodeHeader(payload) : null,
-    timing, generalized: null, fastLoadable: true
+    timing, generalized: null, fastLoadable: source === "TAP"
   };
 }
 
