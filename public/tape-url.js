@@ -29,6 +29,14 @@ export function spectrumComputingMirrorUrl(value) {
   return null;
 }
 
+export function corsShUrl(value) {
+  const target = new URL(String(value ?? "").trim());
+  if (target.protocol !== "https:" && target.protocol !== "http:") {
+    throw new Error("CORS bridge only supports HTTP(S) URLs");
+  }
+  return "https://proxy.cors.sh/" + target.href;
+}
+
 export function allOriginsRawUrl(value) {
   const target = new URL(String(value ?? "").trim());
   if (target.protocol !== "https:" && target.protocol !== "http:") {

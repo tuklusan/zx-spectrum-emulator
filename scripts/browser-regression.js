@@ -172,11 +172,15 @@ frame.addEventListener("load", async () => {
     await waitFor(
       () => {
         const status = doc.querySelector("#status")?.value ?? "";
+        const mediaStatus = doc.querySelector("#mediaStatus");
         if (/CORS bridge/i.test(status)) headerPolluted = true;
+        if (!mediaStatus.hidden && mediaStatus.dataset.state === "error") {
+          throw new Error("DreamWalker media error: " + mediaStatus.textContent);
+        }
         return /DreamWalker\(48K\)\.tzx\.zip/i.test(doc.querySelector("#mediaFileLabel")?.textContent ?? "")
           && status === 'Autoload started with LOAD ""';
       },
-      35_000,
+      55_000,
       "DreamWalker URL switch"
     );
     const mediaStatus = doc.querySelector("#mediaStatus");
@@ -185,8 +189,15 @@ frame.addEventListener("load", async () => {
     result.dataset.state = "pass";
     result.textContent = "PASS: ZX Carrom switched to DreamWalker from the real public URL";
   } catch (error) {
+    const doc = frame.contentDocument;
+    const status = doc?.querySelector("#status")?.value ?? "(no Spectrum status)";
+    const mediaStatus = doc?.querySelector("#mediaStatus")?.textContent ?? "(no media status)";
+    const mediaLabel = doc?.querySelector("#mediaFileLabel")?.textContent ?? "(no media label)";
     result.dataset.state = "fail";
-    result.textContent = "FAIL: " + error.message;
+    result.textContent = "FAIL: " + error.message
+      + " | Spectrum: " + status
+      + " | Media: " + mediaStatus
+      + " | Label: " + mediaLabel;
   }
 }, { once: true });
 frame.src = initialUrl;
@@ -307,11 +318,11 @@ try {
       "--force-device-scale-factor=1",
       `--user-data-dir=${profile}`,
       "--window-size=1440,1000",
-      "--virtual-time-budget=60000",
+      "--virtual-time-budget=75000",
       `--screenshot=${screenshot}`,
       "--dump-dom",
       new URL("/__media-switch", BASE).href
-    ], 90_000);
+    ], 105_000);
     await writeFile(domPath, stdout);
     if (!/id="result"[^>]*data-state="pass"/i.test(stdout)) {
       const result = stdout.match(/<output[^>]*id="result"[^>]*>([^<]*)<\/output>/i)?.[1] ?? "switch result missing";

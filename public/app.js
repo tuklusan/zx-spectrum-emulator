@@ -10,7 +10,7 @@ import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
 import { unwrapSpectrumMedia } from "./media.js?v=20261005-unified-media";
-import { allOriginsRawUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "./tape-url.js?v=20261005-media-switch";
+import { allOriginsRawUrl, corsShUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "./tape-url.js?v=20261005-url-switch";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
@@ -600,7 +600,9 @@ async function fetchRemoteMediaAttempt(url, signal) {
   }, REMOTE_MEDIA_FETCH_TIMEOUT_MS);
 
   try {
-    return await fetch(url, { mode: "cors", signal: controller.signal });
+    const response = await fetch(url, { mode: "cors", signal: controller.signal });
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    return await response.arrayBuffer();
   } catch (error) {
     if (signal?.aborted) throw error;
     if (timedOut) throw new Error("Media fetch timed out");
@@ -622,10 +624,16 @@ async function fetchRemoteMedia(url, signal) {
       notice: targetIndex === 0 ? null : "Trying backup media host"
     });
     attempts.push({
-      url: allOriginsRawUrl(target),
+      url: corsShUrl(target),
       notice: targetIndex === 0
         ? "Direct media fetch blocked; retrying through CORS bridge"
-        : "Backup media host also needs the CORS bridge"
+        : "Trying backup media host through CORS bridge"
+    });
+    attempts.push({
+      url: allOriginsRawUrl(target),
+      notice: targetIndex === 0
+        ? "First CORS bridge failed; trying another"
+        : "Backup media host: trying another CORS bridge"
     });
   }
 
@@ -633,9 +641,7 @@ async function fetchRemoteMedia(url, signal) {
   for (const attempt of attempts) {
     if (attempt.notice) showMediaNotice(attempt.notice);
     try {
-      const response = await fetchRemoteMediaAttempt(attempt.url, signal);
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      return response;
+      return await fetchRemoteMediaAttempt(attempt.url, signal);
     } catch (error) {
       if (signal?.aborted) throw error;
       lastFailure = error;
@@ -643,7 +649,7 @@ async function fetchRemoteMedia(url, signal) {
   }
 
   throw new Error(
-    "Media fetch failed directly and through the CORS bridge"
+    "Media fetch failed directly and through the CORS bridges"
     + (lastFailure?.message ? ": " + lastFailure.message : ""),
     { cause: lastFailure }
   );
@@ -662,8 +668,7 @@ async function loadSpectrumMedia(source, {
   if (typeof source === "string") {
     resolvedUrl = normalizeRemoteFileUrl(source, window.location.href, "Media");
     showMediaNotice("Fetching media from " + resolvedUrl);
-    const response = await fetchRemoteMedia(resolvedUrl, request?.controller.signal);
-    input = await response.arrayBuffer();
+    input = await fetchRemoteMedia(resolvedUrl, request?.controller.signal);
     // A proxy URL has no useful filename. Keep the original target for type detection.
     sourceLabel = resolvedUrl;
   } else if (source && typeof source.arrayBuffer === "function") {

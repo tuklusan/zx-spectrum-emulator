@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { allOriginsRawUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "../public/tape-url.js";
+import { allOriginsRawUrl, corsShUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "../public/tape-url.js";
 
 test("rewrites GitHub blob links to raw file URLs", () => {
   assert.equal(normalizeTapeUrl("https://github.com/tuklusan/ZX-Carrom/blob/main/dist/zxcarrom.tzx","https://tuklusan.github.io/zx-spectrum-emulator/"),
@@ -67,6 +67,11 @@ test("keeps non-ZXDB Spectrum Computing URLs on their original host", () => {
 });
 
 
+test("builds a cors.sh streaming fallback without changing the target URL", () => {
+  const target = "https://example.com/games/Hello World.tzx?x=1&y=2";
+  assert.equal(corsShUrl(target), "https://proxy.cors.sh/" + new URL(target).href);
+});
+
 test("builds an AllOrigins raw fallback without changing the target URL", () => {
   const target = "https://example.com/games/Hello World.tzx?x=1&y=2";
   const proxied = new URL(allOriginsRawUrl(target));
@@ -75,6 +80,7 @@ test("builds an AllOrigins raw fallback without changing the target URL", () => 
   assert.equal(proxied.searchParams.get("url"), new URL(target).href);
 });
 
-test("rejects non-web URLs for the CORS bridge", () => {
+test("rejects non-web URLs for the CORS bridges", () => {
+  assert.throws(() => corsShUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
   assert.throws(() => allOriginsRawUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
 });
