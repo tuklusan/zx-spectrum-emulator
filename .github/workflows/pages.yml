@@ -39,6 +39,9 @@ jobs:
       - name: Verify Pages SEO output
         run: node scripts/verify-pages-seo.js
 
+      - name: Check production media relay
+        run: node scripts/check-media-relay.js
+
       - name: Run Spectrum browser regressions
         run: node scripts/browser-regression.js
 
