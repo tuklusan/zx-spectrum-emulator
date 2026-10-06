@@ -307,6 +307,37 @@ try {
     }
   }
 
+  const carrom = fixtures.find((fixture) => fixture.name === "carrom");
+  const socialProfile = await mkdtemp(join(tmpdir(), "zx-browser-social-"));
+  const socialScreenshot = resolve("dist/public/assets/zx-spectrum-emulator-social.png");
+  console.log("Browser regression: social-preview");
+  try {
+    await runChrome(chrome, [
+      "--headless=new",
+      "--no-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--hide-scrollbars",
+      "--mute-audio",
+      "--autoplay-policy=no-user-gesture-required",
+      "--disable-background-timer-throttling",
+      "--disable-backgrounding-occluded-windows",
+      "--disable-renderer-backgrounding",
+      "--run-all-compositor-stages-before-draw",
+      "--force-device-scale-factor=1",
+      `--user-data-dir=${socialProfile}`,
+      "--window-size=1200,630",
+      `--virtual-time-budget=${carrom.budgetMs}`,
+      `--screenshot=${socialScreenshot}`,
+      directLaunchUrl(carrom)
+    ]);
+    if (!existsSync(socialScreenshot) || statSync(socialScreenshot).size < 10_000) {
+      throw new Error("social preview screenshot was not created correctly");
+    }
+  } finally {
+    await rm(socialProfile, { recursive: true, force: true });
+  }
+
   const profile = await mkdtemp(join(tmpdir(), "zx-browser-switch-"));
   const screenshot = join(OUTPUT, "media-switch-dreamwalker-desktop.png");
   const domPath = join(OUTPUT, "media-switch-dreamwalker-desktop.html");

@@ -3,16 +3,62 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ZX Spectrum Online Emulator | JavaScript 48K Web Emulator</title>
-    <meta name="description" content="Free ZX Spectrum 48K online emulator in JavaScript. Load TAP and timed TZX tapes, SNA/Z80 snapshots, RZX recordings, BASIC and Z80 debugging tools.">
+    <title>ZX Spectrum 48K Online Emulator | JavaScript Web Emulator</title>
+    <meta name="description" content="Play ZX Spectrum 48K games and software in your browser. Load TAP/TZX tapes, ZIP files, SNA/Z80 snapshots or URLs with sound and fast tape loading.">
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+    <meta name="application-name" content="ZX Spectrum 48K Online Emulator">
+    <meta name="theme-color" content="#111513">
     <link rel="canonical" href="https://tuklusan.github.io/zx-spectrum-emulator/">
+
+    <!-- Open Graph: Facebook, LinkedIn, Discord and other link previews -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="ZX Spectrum Online Emulator | JavaScript 48K Web Emulator">
-    <meta property="og:description" content="Run a ZX Spectrum 48K in your browser with TAP/TZX tape loading, SNA/Z80 snapshots, RZX playback, BASIC tools and a built-in Z80 debugger.">
+    <meta property="og:site_name" content="ZX Spectrum 48K Online Emulator">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:title" content="ZX Spectrum 48K Online Emulator">
+    <meta property="og:description" content="Run a Sinclair ZX Spectrum 48K in your browser with fast TAP/TZX loading, snapshots, URL loading, sound and built-in Z80 tools.">
     <meta property="og:url" content="https://tuklusan.github.io/zx-spectrum-emulator/">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="ZX Spectrum Online Emulator | JavaScript 48K Web Emulator">
-    <meta name="twitter:description" content="JavaScript ZX Spectrum 48K web emulator with TAP/TZX, SNA/Z80, RZX, BASIC and Z80 debugging tools.">
+    <meta property="og:image" content="https://tuklusan.github.io/zx-spectrum-emulator/public/assets/zx-spectrum-emulator-social.png">
+    <meta property="og:image:secure_url" content="https://tuklusan.github.io/zx-spectrum-emulator/public/assets/zx-spectrum-emulator-social.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="ZX Spectrum 48K web emulator running ZX Carrom in a browser">
+
+    <!-- X / Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ZX Spectrum 48K Online Emulator">
+    <meta name="twitter:description" content="Run a Sinclair ZX Spectrum 48K in your browser with fast TAP/TZX loading, snapshots, URL loading, sound and built-in Z80 tools.">
+    <meta name="twitter:image" content="https://tuklusan.github.io/zx-spectrum-emulator/public/assets/zx-spectrum-emulator-social.png">
+    <meta name="twitter:image:alt" content="ZX Spectrum 48K web emulator running ZX Carrom in a browser">
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "ZX Spectrum 48K Online Emulator",
+        "url": "https://tuklusan.github.io/zx-spectrum-emulator/",
+        "description": "Play ZX Spectrum 48K games and software in your browser. Load TAP/TZX tapes, ZIP files, SNA/Z80 snapshots or URLs with sound and fast tape loading.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "JavaScript in a modern web browser",
+        "isAccessibleForFree": true,
+        "inLanguage": "en",
+        "license": "https://github.com/tuklusan/zx-spectrum-emulator/blob/main/LICENSE",
+        "softwareHelp": "https://github.com/tuklusan/zx-spectrum-emulator#readme",
+        "sameAs": [
+          "https://github.com/tuklusan/zx-spectrum-emulator"
+        ],
+        "featureList": [
+          "ZX Spectrum 48K emulation",
+          "TAP and timed TZX tape loading",
+          "ZIP and URL media loading",
+          "SNA and Z80 snapshots",
+          "RZX playback",
+          "Sinclair BASIC tools",
+          "Z80 debugger and rewind"
+        ]
+      }
+    </script>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="./public/styles.css?v=20261005-media-switch-2">
     <link rel="stylesheet" href="./public/seo.css">
@@ -85,7 +131,7 @@ RUN</textarea><button type="submit">Type Pasted Text</button></form>
       <header class="spectrum-seo-hero">
         <p class="spectrum-seo-kicker">Free · Open source · Runs in your browser</p>
         <h1>ZX Spectrum 48K Online Emulator</h1>
-        <p class="spectrum-seo-summary">Run a Sinclair ZX Spectrum 48K directly in your browser with this JavaScript web emulator. Load TAP and timed TZX tapes, open SNA and Z80 snapshots, play RZX recordings, paste Sinclair BASIC, and inspect the machine with built-in Z80 debugging tools.</p>
+        <p class="spectrum-seo-summary">Run a Sinclair ZX Spectrum 48K directly in your browser with this JavaScript web emulator. Load TAP and timed TZX tapes, ZIP files, SNA/Z80 snapshots and RZX recordings from your device or a URL, with fast tape loading, sound, Sinclair BASIC and built-in Z80 debugging tools.</p>
         <ul class="spectrum-seo-pills" aria-label="ZX Spectrum emulator features">
           <li>JavaScript web emulator</li>
           <li>TAP / timed TZX</li>
@@ -100,13 +146,13 @@ RUN</textarea><button type="submit">Type Pasted Text</button></form>
         <section class="spectrum-seo-section">
           <h2 id="about-zx-spectrum-emulator">ZX Spectrum web emulator for games, BASIC and Z80 development</h2>
           <p>This browser-based emulator recreates the original 48K Sinclair ZX Spectrum around a validated Z80 CPU core, 48K memory map, keyboard matrix, beeper, 50 Hz display and ULA timing behavior. It runs as a JavaScript application in a modern web browser, with no desktop emulator installation required.</p>
-          <p>It is deliberately more than a quick game launcher. The same page combines tape and snapshot loading with Sinclair BASIC import/export, RZX playback, instruction stepping, reverse stepping, rewind history, live registers and flags, disassembly, memory inspection, raster timing and source-listing tools.</p>
+          <p>It is deliberately more than a quick game launcher. Media can come from your device or a web URL, and ZIP files can hold supported Spectrum media. The same page also combines Sinclair BASIC import/export, RZX playback, instruction stepping, reverse stepping, rewind history, live registers and flags, disassembly, memory inspection, raster timing and source-listing tools.</p>
         </section>
 
         <div class="spectrum-seo-feature-grid" aria-label="ZX Spectrum emulator feature highlights">
           <article class="spectrum-seo-card">
-            <h3>TAP and TZX tape support</h3>
-            <p>Open <code>.tap</code> and <code>.tzx</code> tape images in the browser. Tapes are inserted as complete cassettes and autoload from the first block, so the Spectrum and any custom loader decide when later blocks are read.</p>
+            <h3>TAP, TZX and URL loading</h3>
+            <p>Open <code>.tap</code> and <code>.tzx</code> tape images from your device, a ZIP file or a pasted URL. Tapes are inserted as complete cassettes and autoload from the first block, so the Spectrum and any custom loader decide when later blocks are read.</p>
           </article>
           <article class="spectrum-seo-card">
             <h3>SNA and Z80 snapshot support</h3>
@@ -149,6 +195,10 @@ RUN</textarea><button type="submit">Type Pasted Text</button></form>
                 <td>Step through or play compatible 48K RZX input recordings with embedded or user-supplied SNA/Z80 snapshots.</td>
               </tr>
               <tr>
+                <td><code>ZIP</code></td>
+                <td>Open ZIP files containing supported Spectrum media, including files loaded from a web URL.</td>
+              </tr>
+              <tr>
                 <td><code>BAS / TXT</code></td>
                 <td>Paste or import Sinclair BASIC source, tokenize it into Spectrum memory, run it, and export editable BASIC text.</td>
               </tr>
@@ -163,7 +213,7 @@ RUN</textarea><button type="submit">Type Pasted Text</button></form>
 
         <section class="spectrum-seo-section">
           <h2>Open-source JavaScript ZX Spectrum emulator</h2>
-          <p>The emulator code is open source under the MIT License. The bundled historical ZX Spectrum 48K ROM is separate from the emulator code license; the repository keeps its ROM and third-party provenance notes separately.</p>
+          <p>The emulator code is open source under the MIT License. The bundled historical ZX Spectrum 48K ROM has its own terms, so the repository keeps the ROM and third-party notices separately.</p>
           <nav class="spectrum-seo-links" aria-label="Project links">
             <a href="https://github.com/tuklusan/zx-spectrum-emulator">ZX Spectrum emulator source on GitHub</a>
             <a href="https://github.com/tuklusan/zx-spectrum-emulator/blob/main/LICENSE" rel="license">MIT License</a>

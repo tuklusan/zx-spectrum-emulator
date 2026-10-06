@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tuklusan.github.io/zx-spectrum-emulator/sitemap.xml

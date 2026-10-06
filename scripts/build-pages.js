@@ -34,6 +34,7 @@ await copyFile("public/cpm.html", "dist/cpm.html");
 await copyFile("public/trs80.html", "dist/trs80.html");
 await copyFile("public/ti85.html", "dist/ti85.html");
 await copyFile("sitemap.xml", "dist/sitemap.xml");
+await copyFile("robots.txt", "dist/robots.txt");
 await cp("public", "dist/public", { recursive: true });
 for (const htmlShell of ["index.html", "spectrum.html", "cpm.html", "trs80.html", "ti85.html"]) {
   await rm(`dist/public/${htmlShell}`, { force: true });

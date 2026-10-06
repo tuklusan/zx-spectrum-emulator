@@ -43,6 +43,16 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
   assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-url-switch-8"/);
+  assert.match(spectrum, /<title>ZX Spectrum 48K Online Emulator \| JavaScript Web Emulator<\/title>/);
+  assert.match(spectrum, /name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"/);
+  assert.match(spectrum, /<!-- Open Graph: Facebook, LinkedIn, Discord and other link previews -->/);
+  assert.match(spectrum, /property="og:image" content="https:\/\/tuklusan\.github\.io\/zx-spectrum-emulator\/public\/assets\/zx-spectrum-emulator-social\.png"/);
+  assert.match(spectrum, /<!-- X \/ Twitter -->/);
+  assert.match(spectrum, /name="twitter:card" content="summary_large_image"/);
+  assert.match(spectrum, /name="twitter:image" content="https:\/\/tuklusan\.github\.io\/zx-spectrum-emulator\/public\/assets\/zx-spectrum-emulator-social\.png"/);
+  assert.match(spectrum, /"@type": "WebApplication"/);
+  const spectrumBody = spectrum.slice(spectrum.indexOf("<body"));
+  assert.doesNotMatch(spectrumBody, /zx-spectrum-emulator-social\.png/);
   assert.match(spectrum, /id="audioToggle"[^>]*aria-pressed="true"[^>]*>Sound On<\/button>/);
   assert.match(spectrum, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/index\.html">Machines</);
@@ -82,6 +92,9 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.equal(ti85RomIndex < free85RomIndex, true);
   const devServer = await readFile("scripts/dev-server.js", "utf8");
   assert.match(devServer, /"\/ti85\.html"/);
+  const browserRegression = await readFile("scripts/browser-regression.js", "utf8");
+  assert.match(browserRegression, /zx-spectrum-emulator-social\.png/);
+  assert.match(browserRegression, /--window-size=1200,630/);
 });
 
 test("Spectrum viewer is play-first and keeps advanced tools dormant by default", async () => {
@@ -157,6 +170,8 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.doesNotMatch(index, /id="snapshotFile"/);
 
   assert.match(index, /styles\.css\?v=20261005-media-switch-2/);
+  assert.match(index, /ZIP files, SNA\/Z80 snapshots and RZX recordings from your device or a URL/);
+  assert.match(index, /<td><code>ZIP<\/code><\/td>/);
   const styles = await readFile("public/styles.css", "utf8");
   assert.match(styles, /spectrum-key-row:nth-child\(2\)\{padding-left:4%\}/);
   assert.match(styles, /spectrum-key-row:nth-child\(3\)\{padding-left:6%\}/);
