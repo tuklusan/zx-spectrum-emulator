@@ -49,20 +49,12 @@ export function spectrumComputingMirrorUrl(value) {
   return null;
 }
 
-export function corsDevUrl(value) {
+export function mediaRelayUrl(value) {
   const target = new URL(String(value ?? "").trim());
   if (target.protocol !== "https:" && target.protocol !== "http:") {
-    throw new Error("CORS bridge only supports HTTP(S) URLs");
+    throw new Error("Media relay only supports HTTP(S) URLs");
   }
-  return "https://proxy.cors.dev/" + target.href;
-}
-
-export function allOriginsRawUrl(value) {
-  const target = new URL(String(value ?? "").trim());
-  if (target.protocol !== "https:" && target.protocol !== "http:") {
-    throw new Error("CORS bridge only supports HTTP(S) URLs");
-  }
-  const proxy = new URL("https://api.allorigins.win/raw");
-  proxy.searchParams.set("url", target.href);
-  return proxy.href;
+  const relay = new URL("https://zx-spectrum-emulator.vagabondcouple.workers.dev/media");
+  relay.searchParams.set("url", target.href);
+  return relay.href;
 }

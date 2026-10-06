@@ -167,7 +167,13 @@ frame.addEventListener("load", async () => {
     );
     const input = doc.querySelector("#mediaUrl");
     input.value = dreamwalkerUrl;
-    doc.querySelector("#mediaUrlLoad").click();
+    const loadButton = doc.querySelector("#mediaUrlLoad");
+    loadButton.click();
+    const mediaStatusAtStart = doc.querySelector("#mediaStatus");
+    if (!loadButton.disabled) throw new Error("Load URL button did not disable while fetching");
+    if (!/^Please wait…/i.test(mediaStatusAtStart?.textContent ?? "")) {
+      throw new Error("Please wait message was not shown while fetching");
+    }
     let headerPolluted = false;
     await waitFor(
       () => {

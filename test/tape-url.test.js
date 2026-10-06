@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { allOriginsRawUrl, corsDevUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl } from "../public/tape-url.js";
+import { mediaRelayUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl } from "../public/tape-url.js";
 
 test("rewrites GitHub blob links to raw file URLs", () => {
   assert.equal(normalizeTapeUrl("https://github.com/tuklusan/ZX-Carrom/blob/main/dist/zxcarrom.tzx","https://tuklusan.github.io/zx-spectrum-emulator/"),
@@ -97,20 +97,14 @@ test("keeps non-ZXDB Spectrum Computing URLs on their original host", () => {
 });
 
 
-test("builds a cors.dev fallback without changing the target URL", () => {
+test("builds the project media relay URL without changing the target URL", () => {
   const target = "https://example.com/games/Hello World.tzx?x=1&y=2";
-  assert.equal(corsDevUrl(target), "https://proxy.cors.dev/" + new URL(target).href);
+  const relayed = new URL(mediaRelayUrl(target));
+  assert.equal(relayed.origin, "https://zx-spectrum-emulator.vagabondcouple.workers.dev");
+  assert.equal(relayed.pathname, "/media");
+  assert.equal(relayed.searchParams.get("url"), new URL(target).href);
 });
 
-test("builds an AllOrigins raw fallback without changing the target URL", () => {
-  const target = "https://example.com/games/Hello World.tzx?x=1&y=2";
-  const proxied = new URL(allOriginsRawUrl(target));
-  assert.equal(proxied.origin, "https://api.allorigins.win");
-  assert.equal(proxied.pathname, "/raw");
-  assert.equal(proxied.searchParams.get("url"), new URL(target).href);
-});
-
-test("rejects non-web URLs for the CORS bridges", () => {
-  assert.throws(() => corsDevUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
-  assert.throws(() => allOriginsRawUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
+test("rejects non-web URLs for the media relay", () => {
+  assert.throws(() => mediaRelayUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
 });

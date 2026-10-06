@@ -10,7 +10,7 @@ import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
 import { unwrapSpectrumMedia } from "./media.js?v=20261005-archive-choice";
-import { allOriginsRawUrl, corsDevUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl } from "./tape-url.js?v=20261005-url-switch-6";
+import { mediaRelayUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherEntry, spectrumComputingPublisherUrl } from "./tape-url.js?v=20261005-url-switch-7";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
@@ -616,32 +616,32 @@ async function fetchRemoteMediaAttempt(url, signal) {
 async function fetchRemoteMedia(url, signal) {
   const publisherUrl = spectrumComputingPublisherUrl(url);
   const mirrorUrl = spectrumComputingMirrorUrl(url);
-  const targets = [...new Set([url, publisherUrl, mirrorUrl].filter(Boolean))];
-  const attempts = [];
+  const relayTarget = publisherUrl || url;
+  const attempts = [
+    { target: url, url, notice: null }
+  ];
 
-  for (const [targetIndex, target] of targets.entries()) {
+  if (publisherUrl && publisherUrl !== url) {
     attempts.push({
-      target,
-      url: target,
-      notice: targetIndex === 0
-        ? null
-        : target === publisherUrl
-          ? "Trying the publisher download"
-          : "Trying backup media host"
+      target: publisherUrl,
+      url: publisherUrl,
+      notice: "Please wait… trying the publisher download"
     });
+  }
+
+  attempts.push({
+    target: relayTarget,
+    url: mediaRelayUrl(relayTarget),
+    notice: publisherUrl
+      ? "Please wait… publisher download blocked; trying the backup relay"
+      : "Please wait… direct download blocked; trying the backup relay"
+  });
+
+  if (mirrorUrl && mirrorUrl !== url && mirrorUrl !== publisherUrl) {
     attempts.push({
-      target,
-      url: corsDevUrl(target),
-      notice: targetIndex === 0
-        ? "Direct media fetch blocked; retrying through CORS bridge"
-        : "Trying backup media host through CORS bridge"
-    });
-    attempts.push({
-      target,
-      url: allOriginsRawUrl(target),
-      notice: targetIndex === 0
-        ? "First CORS bridge failed; trying another"
-        : "Backup media host: trying another CORS bridge"
+      target: mirrorUrl,
+      url: mirrorUrl,
+      notice: "Please wait… trying the ZXDB backup host"
     });
   }
 
@@ -660,7 +660,7 @@ async function fetchRemoteMedia(url, signal) {
   }
 
   throw new Error(
-    "Media fetch failed directly and through the CORS bridges"
+    "Media fetch failed through every available route"
     + (lastFailure?.message ? ": " + lastFailure.message : ""),
     { cause: lastFailure }
   );
@@ -679,7 +679,7 @@ async function loadSpectrumMedia(source, {
 
   if (typeof source === "string") {
     resolvedUrl = normalizeRemoteFileUrl(source, window.location.href, "Media");
-    showMediaNotice("Fetching media from " + resolvedUrl);
+    showMediaNotice("Please wait… fetching media");
     const fetched = await fetchRemoteMedia(resolvedUrl, request?.controller.signal);
     input = fetched.bytes;
     if (fetched.targetUrl === spectrumComputingPublisherUrl(resolvedUrl)) {
@@ -730,8 +730,15 @@ async function loadSpectrumMedia(source, {
   throw new Error(`Unsupported Spectrum media type ${media.type}`);
 }
 
+function setMediaUrlBusy(busy) {
+  mediaUrlLoadButton.disabled = busy;
+  mediaUrlInput.setAttribute("aria-busy", String(busy));
+}
+
 async function replaceSpectrumMedia(source, options = {}) {
   const request = beginMediaRequest();
+  const remote = typeof source === "string";
+  if (remote) setMediaUrlBusy(true);
   try {
     const result = await loadSpectrumMedia(source, { ...options, request });
     assertCurrentMediaRequest(request);
@@ -739,6 +746,7 @@ async function replaceSpectrumMedia(source, options = {}) {
     clearStartupMediaQuery();
     return result;
   } finally {
+    if (remote) setMediaUrlBusy(false);
     finishMediaRequest(request);
   }
 }

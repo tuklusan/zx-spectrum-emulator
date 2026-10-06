@@ -42,7 +42,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-url-switch-6"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-url-switch-7"/);
   assert.match(spectrum, /id="audioToggle"[^>]*aria-pressed="true"[^>]*>Sound On<\/button>/);
   assert.match(spectrum, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/index\.html">Machines</);
@@ -147,6 +147,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(index, /id="assemblerSearch"/);
   assert.match(index, /id="mediaFile"/);
   assert.match(index, /id="mediaUrlLoad"/);
+  assert.match(index, /placeholder="https:\/\/spectrumcomputing\.co\.uk\/zxdb\/sinclair\/entries\/0030084\/DreamWalker\(48K\)\.tzx\.zip"/);
   assert.match(index, /id="mediaStatus" class="media-status" role="alert" aria-live="assertive" hidden/);
   assert.match(index, /id="mediaFileLabel"/);
   assert.doesNotMatch(index, /id="mediaAutoloadTape"/);
@@ -155,11 +156,12 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.doesNotMatch(index, /id="tapFile"/);
   assert.doesNotMatch(index, /id="snapshotFile"/);
 
-  assert.match(index, /styles\.css\?v=20261005-media-switch/);
+  assert.match(index, /styles\.css\?v=20261005-media-switch-2/);
   const styles = await readFile("public/styles.css", "utf8");
   assert.match(styles, /spectrum-key-row:nth-child\(2\)\{padding-left:4%\}/);
   assert.match(styles, /spectrum-key-row:nth-child\(3\)\{padding-left:6%\}/);
   assert.match(styles, /key-mosaic i\.on\{background:#343131\}/);
+  assert.match(styles, /remote-loader-row button:disabled\{opacity:\.55;cursor:wait\}/);
   assert.match(app, /softKeyboard\?\.querySelectorAll/);
   assert.match(app, /pointerdown/);
   assert.match(app, /latchedSoftModifiers/);
@@ -215,14 +217,17 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.ok(autoloadFunction.indexOf("setTapeCursor(0)") < autoloadFunction.indexOf("startTapePlayback"));
   const loadMediaFunction = app.slice(app.indexOf("async function loadSpectrumMedia"), app.indexOf("async function replaceSpectrumMedia"));
   assert.match(app, /async function fetchRemoteMedia/);
-  assert.match(app, /corsDevUrl\(target\)/);
-  assert.match(app, /allOriginsRawUrl\(target\)/);
+  assert.match(app, /mediaRelayUrl\(relayTarget\)/);
   assert.match(app, /spectrumComputingPublisherUrl\(url\)/);
   assert.match(app, /spectrumComputingPublisherEntry\(resolvedUrl\)/);
   assert.match(app, /spectrumComputingMirrorUrl\(url\)/);
-  assert.match(app, /Trying the publisher download/);
-  assert.match(app, /Direct media fetch blocked; retrying through CORS bridge/);
-  assert.match(app, /showMediaNotice\("Fetching media from " \+ resolvedUrl\)/);
+  assert.match(app, /Please wait… trying the publisher download/);
+  assert.match(app, /Please wait… publisher download blocked; trying the backup relay/);
+  assert.match(app, /showMediaNotice\("Please wait… fetching media"\)/);
+  assert.match(app, /function setMediaUrlBusy\(busy\)/);
+  assert.match(app, /mediaUrlLoadButton\.disabled = busy/);
+  assert.match(app, /if \(remote\) setMediaUrlBusy\(true\)/);
+  assert.match(app, /if \(remote\) setMediaUrlBusy\(false\)/);
   assert.match(app, /REMOTE_MEDIA_FETCH_TIMEOUT_MS = 5_000/);
   assert.match(app, /return await response\.arrayBuffer\(\)/);
   assert.match(app, /targetUrl: attempt\.target/);
