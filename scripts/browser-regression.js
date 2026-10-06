@@ -4,6 +4,8 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { extname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { unwrapSpectrumMedia } from "../public/media.js";
+import { parseTapeFile } from "../public/tape.js";
 
 const ROOT = resolve("dist");
 const OUTPUT = resolve("browser-regression-artifacts");
@@ -39,7 +41,8 @@ const mediaSwitchTargets = [
   {
     name: "hate",
     url: "https://www.worldofspectrum.org//pub/sinclair/games/h/H.A.T.E..tzx.zip",
-    labelNeedle: "H.A.T.E..tzx.zip"
+    labelNeedle: "H.A.T.E..tzx.zip",
+    requireTopScreenActivity: true
   }
 ];
 
@@ -169,6 +172,7 @@ const frame = document.querySelector("#emulator");
 const targetUrl = ${JSON.stringify(target.url)};
 const targetLabel = ${JSON.stringify(target.labelNeedle)};
 const targetName = ${JSON.stringify(target.name)};
+const requireTopScreenActivity = ${JSON.stringify(Boolean(target.requireTopScreenActivity))};
 const initialUrl = ${JSON.stringify(initialUrl)};
 async function waitFor(check, timeoutMs, label) {
   const deadline = Date.now() + timeoutMs;
@@ -177,6 +181,24 @@ async function waitFor(check, timeoutMs, label) {
     await sleep(50);
   }
   throw new Error("Timed out waiting for " + label);
+}
+function topScreenDetailCount(doc) {
+  const canvas = doc.querySelector("#screen");
+  const context = canvas?.getContext("2d");
+  if (!context) return 0;
+  const image = context.getImageData(32, 24, 256, 120);
+  const data = image.data;
+  const baseR = data[0] ?? 0;
+  const baseG = data[1] ?? 0;
+  const baseB = data[2] ?? 0;
+  let detailed = 0;
+  for (let offset = 0; offset < data.length; offset += 4) {
+    const difference = Math.abs(data[offset] - baseR)
+      + Math.abs(data[offset + 1] - baseG)
+      + Math.abs(data[offset + 2] - baseB);
+    if (difference > 48) detailed += 1;
+  }
+  return detailed;
 }
 frame.addEventListener("load", async () => {
   try {
@@ -215,6 +237,13 @@ frame.addEventListener("load", async () => {
     const mediaStatus = doc.querySelector("#mediaStatus");
     if (!mediaStatus.hidden) throw new Error("media status was not cleared after a successful switch");
     if (frame.contentWindow.scrollY !== 0) throw new Error("viewport did not return to the top after a successful URL load");
+    if (requireTopScreenActivity) {
+      await waitFor(
+        () => topScreenDetailCount(doc) > 40,
+        30_000,
+        targetName + " tape to make visible loading progress"
+      );
+    }
     if (headerPolluted) throw new Error("CORS progress leaked into the Spectrum screen header");
     result.dataset.state = "pass";
     result.textContent = "PASS: ZX Carrom switched to " + targetName + " from the real public URL";
@@ -279,6 +308,26 @@ for (const fixture of fixtures) {
   }
   if (!bytes) throw new Error(`${fixture.name}: fixture fetch failed: ${lastError?.message ?? "unknown error"}`);
   fixtureBodies.set(fixture.browserPath, bytes);
+}
+const hateTarget = mediaSwitchTargets.find((target) => target.name === "hate");
+{
+  const relay = new URL("https://zx-spectrum-emulator.vagabondcouple.workers.dev/media");
+  relay.searchParams.set("url", hateTarget.url);
+  const response = await fetch(relay, { signal: AbortSignal.timeout(15_000) });
+  if (!response.ok) throw new Error("H.A.T.E. tape probe failed: HTTP " + response.status);
+  const archiveBytes = new Uint8Array(await response.arrayBuffer());
+  const media = await unwrapSpectrumMedia(archiveBytes, hateTarget.url);
+  const blocks = parseTapeFile(media.bytes);
+  const summary = blocks.slice(0, 40).map((block, index) => {
+    const bits = [index + ":" + block.type];
+    if (block.header?.name) bits.push("header=" + block.header.name);
+    if (block.signal?.kind) bits.push("signal=" + block.signal.kind);
+    if (block.generalized) bits.push("generalized");
+    if (block.pauseMs) bits.push("pause=" + block.pauseMs);
+    if (block.stopTape) bits.push("stop");
+    return bits.join("/");
+  }).join(", ");
+  console.log("H.A.T.E. tape probe: " + media.name + " | " + blocks.length + " blocks | " + summary);
 }
 const chrome = findChrome();
 const server = staticServer();
