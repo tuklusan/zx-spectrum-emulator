@@ -100,6 +100,7 @@ export class Spectrum48 {
     this.tapeSequenceEndingLevel = false;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
+    this.tapeWaitForRomLoader = false;
     this.inputPlayback = null;
     this.cpuExecuting = false;
     this.busTState = 0;
@@ -190,10 +191,15 @@ export class Spectrum48 {
     this.stopTapePlayback();
   }
 
-  startTapePlayback({ startIndex = this.tapeCursor, initialPauseMs = 0 } = {}) {
+  startTapePlayback({
+    startIndex = this.tapeCursor,
+    initialPauseMs = 0,
+    waitForRomLoader = false
+  } = {}) {
     this.stopTapePlayback();
     this.tapePlaybackBlockIndex = Math.max(0, Math.min(startIndex, this.tapeBlocks.length));
     this.tapeEarLevel = false;
+    this.tapeWaitForRomLoader = Boolean(waitForRomLoader);
     this.loadTapePlaybackBlock(initialPauseMs, this.cpu.tStates);
   }
 
@@ -213,6 +219,7 @@ export class Spectrum48 {
     this.tapeSequenceEndingLevel = false;
     this.tapeEarLevel = false;
     this.tapePlaying = false;
+    this.tapeWaitForRomLoader = false;
   }
 
   loadTapePlaybackBlock(initialPauseMs = 0, startTState = this.cpu.tStates) {
@@ -244,7 +251,9 @@ export class Spectrum48 {
         this.tapePulseIndex = 0;
         this.tapeEarLevel = Boolean(this.tapePulseLevels[0]);
         this.tapePlaying = true;
-        this.tapeNextPulseTState = startTState + this.tapePulseDurations[0];
+        this.tapeNextPulseTState = this.tapeWaitForRomLoader
+          ? 0
+          : startTState + this.tapePulseDurations[0];
         return true;
       }
 
@@ -394,13 +403,19 @@ export class Spectrum48 {
   }
 
   readTapeEarBit() {
+    if (this.tapeWaitForRomLoader) {
+      const pc = this.cpu.PC & 0xffff;
+      if (pc < 0x0556 || pc > 0x05e2) return 0x40;
+      this.tapeWaitForRomLoader = false;
+      this.tapeNextPulseTState = this.cpu.tStates + (this.tapePulseDurations[0] ?? 0);
+    }
     this.advanceTapePlayback();
     if (!this.tapePlaying) return 0x40;
     return this.tapeEarLevel ? 0x40 : 0x00;
   }
 
   advanceTapePlayback() {
-    while (this.tapePlaying && this.cpu.tStates >= this.tapeNextPulseTState) {
+    while (this.tapePlaying && !this.tapeWaitForRomLoader && this.cpu.tStates >= this.tapeNextPulseTState) {
       this.tapePulseIndex += 1;
       if (this.tapePulseIndex >= this.tapePulseDurations.length) {
         const nextBlockTState = this.tapeNextPulseTState;
@@ -651,7 +666,7 @@ export class Spectrum48 {
   }
 
   interceptRomTapeLoad() {
-    if (this.cpu.PC !== 0x0556 || this.tapeCursor >= this.tapeBlocks.length) return 0;
+    if (!this.tapePlaying || this.cpu.PC !== 0x0556 || this.tapeCursor >= this.tapeBlocks.length) return 0;
 
     const block = this.tapeBlocks[this.tapeCursor];
     const expectedFlag = this.cpu.A & 0xff;
@@ -744,7 +759,8 @@ export class Spectrum48 {
         sequenceInitialPauseMs: this.tapeSequenceInitialPauseMs,
         sequenceEndingLevel: this.tapeSequenceEndingLevel,
         earLevel: this.tapeEarLevel,
-        playing: this.tapePlaying
+        playing: this.tapePlaying,
+        waitForRomLoader: this.tapeWaitForRomLoader
       }
     };
   }
@@ -777,6 +793,7 @@ export class Spectrum48 {
     this.tapeSequenceEndingLevel = Boolean(state.tape?.sequenceEndingLevel);
     this.tapeEarLevel = Boolean(state.tape?.earLevel);
     this.tapePlaying = Boolean(state.tape?.playing);
+    this.tapeWaitForRomLoader = Boolean(state.tape?.waitForRomLoader);
     if (this.tapePlaying && this.tapePlaybackBlockIndex < this.tapeBlocks.length) {
       const sequence = this.buildTapeBlockPulseSequence(
         this.tapePlaybackBlockIndex,
