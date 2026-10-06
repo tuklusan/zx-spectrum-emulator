@@ -177,7 +177,7 @@ frame.addEventListener("load", async () => {
         if (!mediaStatus.hidden && mediaStatus.dataset.state === "error") {
           throw new Error("DreamWalker media error: " + mediaStatus.textContent);
         }
-        return /DreamWalker\(48K\)\.tzx\.zip/i.test(doc.querySelector("#mediaFileLabel")?.textContent ?? "")
+        return (doc.querySelector("#mediaFileLabel")?.textContent ?? "").includes("DreamWalker(48K).tzx.zip")
           && status === 'Autoload started with LOAD ""';
       },
       55_000,
