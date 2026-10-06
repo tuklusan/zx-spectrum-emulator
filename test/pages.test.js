@@ -101,10 +101,10 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.ok(audioGateIndex > screenIndex);
   assert.ok(keyboardIndex > audioGateIndex);
   assert.ok(mediaFileIndex > keyboardIndex);
-  assert.ok(mediaUrlIndex > mediaFileIndex);
+  assert.ok(mediaStatusIndex > mediaFileIndex);
+  assert.ok(mediaUrlIndex > mediaStatusIndex);
   assert.ok(mediaUrlLoadIndex > mediaUrlIndex);
-  assert.ok(mediaStatusIndex > mediaUrlLoadIndex);
-  assert.ok(advancedIndex > mediaStatusIndex);
+  assert.ok(advancedIndex > mediaUrlLoadIndex);
   assert.equal((index.match(/data-spectrum-key="/g) ?? []).length, 40);
   assert.equal((index.match(/class="spectrum-key-cell"/g) ?? []).length, 40);
   assert.equal((index.match(/class="key-mosaic"/g) ?? []).length, 8);
@@ -215,8 +215,11 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.ok(autoloadFunction.indexOf("setTapeCursor(0)") < autoloadFunction.indexOf("startTapePlayback"));
   const loadMediaFunction = app.slice(app.indexOf("async function loadSpectrumMedia"), app.indexOf("async function replaceSpectrumMedia"));
   assert.match(app, /async function fetchRemoteMedia/);
-  assert.match(app, /allOriginsRawUrl\(url\)/);
+  assert.match(app, /allOriginsRawUrl\(target\)/);
+  assert.match(app, /spectrumComputingMirrorUrl\(url\)/);
   assert.match(app, /Direct media fetch blocked; retrying through CORS bridge/);
+  assert.match(app, /showMediaNotice\("Fetching media from " \+ resolvedUrl\)/);
+  assert.match(app, /REMOTE_MEDIA_FETCH_TIMEOUT_MS = 8_000/);
   assert.match(loadMediaFunction, /sourceLabel = resolvedUrl/);
   const mediaAudioGateIndex = loadMediaFunction.indexOf("waitForAutoloadAudioGesture");
   assert.ok(mediaAudioGateIndex > 0);
@@ -244,6 +247,8 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.match(app, /while \(frameAccumulatorMs >= SPECTRUM_FRAME_MS/);
   assert.match(app, /function runRzxFrame/);
   assert.match(app, /pumpAudio\(\);/);
+  assert.match(app, /function showMediaNotice/);
+  assert.match(app, /mediaStatusOutput\.dataset\.state = "info"/);
   assert.match(app, /function showMediaError/);
   assert.match(app, /load failed\|failed to fetch/);
   assert.match(app, /remote server blocked browser access \(CORS\)/);

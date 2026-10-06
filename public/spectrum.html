@@ -14,7 +14,7 @@
     <meta name="twitter:title" content="ZX Spectrum Online Emulator | JavaScript 48K Web Emulator">
     <meta name="twitter:description" content="JavaScript ZX Spectrum 48K web emulator with TAP/TZX, SNA/Z80, RZX, BASIC and Z80 debugging tools.">
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./public/styles.css?v=20261005-spectrum-legends">
+    <link rel="stylesheet" href="./public/styles.css?v=20261005-media-switch">
     <link rel="stylesheet" href="./public/seo.css">
   </head>
   <body class="spectrum-page-body">
@@ -40,7 +40,7 @@
 <h2>Load Spectrum media</h2>
 <p class="media-loader-help">TAP, TZX, SNA, Z80, RZX, or a ZIP containing exactly one supported Spectrum file.</p>
 <div class="media-file-loader"><label for="mediaFile">From device</label><input id="mediaFile" type="file" accept=".tap,.tzx,.sna,.z80,.rzx,.zip,application/zip"><output id="mediaFileLabel" class="media-file-label" aria-live="polite">No media loaded</output></div>
-<div class="remote-loader"><label for="mediaUrl">Or load from URL</label><div class="remote-loader-row"><input id="mediaUrl" type="url" inputmode="url" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="https://example.com/game.zip"><button id="mediaUrlLoad" type="button">Load URL</button></div><output id="mediaStatus" class="media-status" role="alert" aria-live="assertive" hidden></output></div>
+<div class="remote-loader"><label for="mediaUrl">Or load from URL</label><output id="mediaStatus" class="media-status" role="alert" aria-live="assertive" hidden></output><div class="remote-loader-row"><input id="mediaUrl" type="url" inputmode="url" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="https://example.com/game.zip"><button id="mediaUrlLoad" type="button">Load URL</button></div></div>
 </article>
 </section>
 <div class="play-controls" aria-label="Basic emulator controls"><button id="runPause" type="button" aria-label="Pause">Pause</button><button id="reset" type="button">Reset</button><button id="audioToggle" type="button" aria-pressed="true">Sound On</button></div>
@@ -177,6 +177,6 @@ RUN</textarea><button type="submit">Type Pasted Text</button></form>
       <span>Contact</span>
       <img src="./public/assets/contact-email.png" alt="Contact email address" width="388" height="60">
     </footer>
-    <script type="module" src="./public/app.js?v=20261005-audio-gate"></script>
+    <script type="module" src="./public/app.js?v=20261005-media-switch"></script>
   </body>
 </html>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { allOriginsRawUrl, normalizeRemoteFileUrl, normalizeTapeUrl } from "../public/tape-url.js";
+import { allOriginsRawUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "../public/tape-url.js";
 
 test("rewrites GitHub blob links to raw file URLs", () => {
   assert.equal(normalizeTapeUrl("https://github.com/tuklusan/ZX-Carrom/blob/main/dist/zxcarrom.tzx","https://tuklusan.github.io/zx-spectrum-emulator/"),
@@ -34,15 +34,25 @@ test("generic remote file errors use the requested label", () => {
   );
 });
 
-test("rewrites Spectrum Computing ZXDB media to the ZXInfo mirror", () => {
+test("keeps Spectrum Computing ZXDB media on the URL the user supplied", () => {
   assert.equal(
     normalizeRemoteFileUrl(
       "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip",
       "https://tuklusan.github.io/zx-spectrum-emulator/",
       "Media"
     ),
+    "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip"
+  );
+});
+
+test("builds the ZXInfo mirror only as a backup", () => {
+  assert.equal(
+    spectrumComputingMirrorUrl(
+      "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip"
+    ),
     "https://zxinfo.dk/media/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip"
   );
+  assert.equal(spectrumComputingMirrorUrl("https://example.com/game.tzx"), null);
 });
 
 test("keeps non-ZXDB Spectrum Computing URLs on their original host", () => {

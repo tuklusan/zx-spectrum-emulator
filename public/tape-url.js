@@ -12,10 +12,6 @@ export function normalizeRemoteFileUrl(value, baseUrl = globalThis.location?.hre
       return "https://raw.githubusercontent.com/" + parts[0] + "/" + parts[1] + "/" + parts[3] + "/" + parts.slice(4).join("/");
     }
   }
-  if ((hostname === "spectrumcomputing.co.uk" || hostname === "www.spectrumcomputing.co.uk")
-      && url.pathname.startsWith("/zxdb/")) {
-    return "https://zxinfo.dk/media" + url.pathname + url.search + url.hash;
-  }
   return url.href;
 }
 
@@ -23,6 +19,15 @@ export function normalizeTapeUrl(value, baseUrl = globalThis.location?.href ?? "
   return normalizeRemoteFileUrl(value, baseUrl, "Tape");
 }
 
+export function spectrumComputingMirrorUrl(value) {
+  const target = new URL(String(value ?? "").trim());
+  const hostname = target.hostname.toLowerCase();
+  if ((hostname === "spectrumcomputing.co.uk" || hostname === "www.spectrumcomputing.co.uk")
+      && target.pathname.startsWith("/zxdb/")) {
+    return "https://zxinfo.dk/media" + target.pathname + target.search + target.hash;
+  }
+  return null;
+}
 
 export function allOriginsRawUrl(value) {
   const target = new URL(String(value ?? "").trim());
