@@ -239,9 +239,9 @@ frame.addEventListener("load", async () => {
     if (frame.contentWindow.scrollY !== 0) throw new Error("viewport did not return to the top after a successful URL load");
     if (requireTopScreenActivity) {
       await waitFor(
-        () => topScreenDetailCount(doc) > 40,
-        30_000,
-        targetName + " tape to make visible loading progress"
+        () => topScreenDetailCount(doc) > 500,
+        45_000,
+        targetName + " tape to get beyond the ROM header"
       );
     }
     if (headerPolluted) throw new Error("CORS progress leaked into the Spectrum screen header");
