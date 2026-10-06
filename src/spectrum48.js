@@ -420,9 +420,19 @@ export class Spectrum48 {
       if (this.tapePulseIndex >= this.tapePulseDurations.length) {
         const nextBlockTState = this.tapeNextPulseTState;
         const completed = this.tapePlaybackBlockIndex;
+        const completedBlock = this.tapeBlocks[completed];
         this.tapeEarLevel = this.tapeSequenceEndingLevel;
         this.tapePlaybackBlockIndex += 1;
         if (this.tapeCursor <= completed) this.tapeCursor = this.tapePlaybackBlockIndex;
+
+        const nextBlock = this.tapeBlocks[this.tapePlaybackBlockIndex];
+        const matchingRomData = completedBlock?.fastLoadable === false
+          && completedBlock.header
+          && nextBlock?.flag === 0xff
+          && nextBlock?.payload?.length === completedBlock.header.length
+          && nextBlock?.checksumValid === true;
+        if (matchingRomData) this.tapeWaitForRomLoader = true;
+
         if (!this.loadTapePlaybackBlock(0, nextBlockTState)) return;
         continue;
       }
