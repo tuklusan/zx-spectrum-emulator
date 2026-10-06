@@ -394,10 +394,8 @@ export function parseTzx(input) {
     }
   }
 
-  if (blocks.some((block) => headerNeedsExactPlayback(block.header))) {
-    for (const block of blocks) {
-      if (block.fastLoadable === true) block.fastLoadable = false;
-    }
+  for (const block of blocks) {
+    if (headerNeedsExactPlayback(block.header)) block.fastLoadable = false;
   }
   return blocks;
 }

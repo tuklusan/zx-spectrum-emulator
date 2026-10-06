@@ -177,7 +177,7 @@ test("detects TZX files through the generic tape parser", () => {
   assert.equal(blocks[0].pauseMs, 500);
 });
 
-test("replays TZX timing exactly when a header uses control codes", () => {
+test("replays only a control-code TZX header exactly, then keeps ordinary data fast", () => {
   const loader = tokenizeBasicLine("10 RANDOMIZE USR 32768");
   const blocks = parseTzx(makeTzx([
     standardTzxBlock(headerBlock({
@@ -191,7 +191,7 @@ test("replays TZX timing exactly when a header uses control codes", () => {
   ]));
 
   assert.equal(blocks[0].header.name.startsWith("\x16\x01\x00"), true);
-  assert.deepEqual(blocks.map((block) => block.fastLoadable), [false, false, false]);
+  assert.deepEqual(blocks.map((block) => block.fastLoadable), [false, true, true]);
 });
 
 test("preserves TZX pause and stop-tape control blocks", () => {

@@ -381,7 +381,7 @@ try {
           throw new Error(`${label}: screenshot was not created correctly`);
         }
       } finally {
-        await rm(profile, { recursive: true, force: true });
+        await rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
       }
     }
   }
@@ -414,7 +414,7 @@ try {
       throw new Error("social preview screenshot was not created correctly");
     }
   } finally {
-    await rm(socialProfile, { recursive: true, force: true });
+    await rm(socialProfile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 
   for (const target of mediaSwitchTargets) {
@@ -454,7 +454,7 @@ try {
         throw new Error(`${target.name} media switch screenshot was not created correctly`);
       }
     } finally {
-      await rm(profile, { recursive: true, force: true });
+      await rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     }
   }
 } finally {
