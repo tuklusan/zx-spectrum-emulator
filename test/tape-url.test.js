@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { allOriginsRawUrl, corsDevUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "../public/tape-url.js";
+import { allOriginsRawUrl, corsDevUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherUrl } from "../public/tape-url.js";
 
 test("rewrites GitHub blob links to raw file URLs", () => {
   assert.equal(normalizeTapeUrl("https://github.com/tuklusan/ZX-Carrom/blob/main/dist/zxcarrom.tzx","https://tuklusan.github.io/zx-spectrum-emulator/"),
@@ -42,6 +42,21 @@ test("keeps Spectrum Computing ZXDB media on the URL the user supplied", () => {
       "Media"
     ),
     "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip"
+  );
+});
+
+test("uses the DreamWalker publisher download as a backup", () => {
+  assert.equal(
+    spectrumComputingPublisherUrl(
+      "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tzx.zip"
+    ),
+    "https://www.retrosouls.net/zx/dreamwalker.zip"
+  );
+  assert.equal(
+    spectrumComputingPublisherUrl(
+      "https://spectrumcomputing.co.uk/zxdb/sinclair/entries/0030084/DreamWalker(48K).tap.zip"
+    ),
+    null
   );
 });
 

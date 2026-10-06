@@ -10,7 +10,7 @@ import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
 import { unwrapSpectrumMedia } from "./media.js?v=20261005-unified-media";
-import { allOriginsRawUrl, corsDevUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "./tape-url.js?v=20261005-url-switch-4";
+import { allOriginsRawUrl, corsDevUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl, spectrumComputingPublisherUrl } from "./tape-url.js?v=20261005-url-switch-5";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
@@ -614,14 +614,19 @@ async function fetchRemoteMediaAttempt(url, signal) {
 }
 
 async function fetchRemoteMedia(url, signal) {
+  const publisherUrl = spectrumComputingPublisherUrl(url);
   const mirrorUrl = spectrumComputingMirrorUrl(url);
-  const targets = mirrorUrl && mirrorUrl !== url ? [url, mirrorUrl] : [url];
+  const targets = [...new Set([url, publisherUrl, mirrorUrl].filter(Boolean))];
   const attempts = [];
 
   for (const [targetIndex, target] of targets.entries()) {
     attempts.push({
       url: target,
-      notice: targetIndex === 0 ? null : "Trying backup media host"
+      notice: targetIndex === 0
+        ? null
+        : target === publisherUrl
+          ? "Trying the publisher download"
+          : "Trying backup media host"
     });
     attempts.push({
       url: corsDevUrl(target),
