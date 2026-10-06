@@ -42,7 +42,7 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(index, /src="\.\/public\/assets\/machine-selector-banner\.png"/);
   assert.match(index, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/public\/styles\.css(?:\?[^"]+)?"/);
-  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-audio-gate"/);
+  assert.match(spectrum, /src="\.\/public\/app\.js\?v=20261005-media-switch"/);
   assert.match(spectrum, /id="audioToggle"[^>]*aria-pressed="true"[^>]*>Sound On<\/button>/);
   assert.match(spectrum, /src="\.\/public\/assets\/contact-email\.png"/);
   assert.match(spectrum, /href="\.\/index\.html">Machines</);
@@ -155,7 +155,7 @@ test("Spectrum viewer is play-first and keeps advanced tools dormant by default"
   assert.doesNotMatch(index, /id="tapFile"/);
   assert.doesNotMatch(index, /id="snapshotFile"/);
 
-  assert.match(index, /styles\.css\?v=20261005-spectrum-legends/);
+  assert.match(index, /styles\.css\?v=20261005-media-switch/);
   const styles = await readFile("public/styles.css", "utf8");
   assert.match(styles, /spectrum-key-row:nth-child\(2\)\{padding-left:4%\}/);
   assert.match(styles, /spectrum-key-row:nth-child\(3\)\{padding-left:6%\}/);
