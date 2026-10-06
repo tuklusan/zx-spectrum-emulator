@@ -10,7 +10,7 @@ import { applySpectrumSnapshot, createZ80Snapshot } from "./snapshot.js";
 import { parseRzx, RzxPlayback } from "./rzx.js";
 import { parseTapeFile } from "./tape.js?v=20261004-tzx-url";
 import { unwrapSpectrumMedia } from "./media.js?v=20261005-unified-media";
-import { allOriginsRawUrl, corsShUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "./tape-url.js?v=20261005-url-switch";
+import { allOriginsRawUrl, corsLolUrl, corsShUrl, normalizeRemoteFileUrl, normalizeTapeUrl, spectrumComputingMirrorUrl } from "./tape-url.js?v=20261005-url-switch-2";
 
 const canvas = document.querySelector("#screen");
 const context = canvas.getContext("2d");
@@ -630,10 +630,16 @@ async function fetchRemoteMedia(url, signal) {
         : "Trying backup media host through CORS bridge"
     });
     attempts.push({
-      url: allOriginsRawUrl(target),
+      url: corsLolUrl(target),
       notice: targetIndex === 0
         ? "First CORS bridge failed; trying another"
         : "Backup media host: trying another CORS bridge"
+    });
+    attempts.push({
+      url: allOriginsRawUrl(target),
+      notice: targetIndex === 0
+        ? "Second CORS bridge failed; trying one more"
+        : "Backup media host: trying one more CORS bridge"
     });
   }
 

@@ -37,6 +37,16 @@ export function corsShUrl(value) {
   return "https://proxy.cors.sh/" + target.href;
 }
 
+export function corsLolUrl(value) {
+  const target = new URL(String(value ?? "").trim());
+  if (target.protocol !== "https:" && target.protocol !== "http:") {
+    throw new Error("CORS bridge only supports HTTP(S) URLs");
+  }
+  const proxy = new URL("https://api.cors.lol/");
+  proxy.searchParams.set("url", target.href);
+  return proxy.href;
+}
+
 export function allOriginsRawUrl(value) {
   const target = new URL(String(value ?? "").trim());
   if (target.protocol !== "https:" && target.protocol !== "http:") {
