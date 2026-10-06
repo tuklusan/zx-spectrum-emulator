@@ -29,14 +29,12 @@ export function spectrumComputingMirrorUrl(value) {
   return null;
 }
 
-export function codeTabsUrl(value) {
+export function corsDevUrl(value) {
   const target = new URL(String(value ?? "").trim());
   if (target.protocol !== "https:" && target.protocol !== "http:") {
     throw new Error("CORS bridge only supports HTTP(S) URLs");
   }
-  const proxy = new URL("https://api.codetabs.com/v1/proxy");
-  proxy.searchParams.set("quest", target.href);
-  return proxy.href;
+  return "https://proxy.cors.dev/" + target.href;
 }
 
 export function allOriginsRawUrl(value) {
