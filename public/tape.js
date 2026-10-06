@@ -102,13 +102,6 @@ function decodeTapeBlock(raw, index, source = "TAP", pauseMs = null, timing = nu
   };
 }
 
-function headerNeedsExactPlayback(header) {
-  if (!header) return false;
-  if (header.type < 0 || header.type >= HEADER_TYPES.length) return true;
-  return Array.from(header.name, (char) => char.charCodeAt(0))
-    .some((code) => code < 0x20 || code > 0x7e);
-}
-
 function requireBytes(bytes, offset, length, message) {
   if (offset < 0 || length < 0 || offset + length > bytes.length) throw new Error(message);
 }
@@ -394,9 +387,6 @@ export function parseTzx(input) {
     }
   }
 
-  for (const block of blocks) {
-    if (headerNeedsExactPlayback(block.header)) block.fastLoadable = false;
-  }
   return blocks;
 }
 

@@ -177,7 +177,7 @@ test("detects TZX files through the generic tape parser", () => {
   assert.equal(blocks[0].pauseMs, 500);
 });
 
-test("replays only a control-code TZX header exactly, then keeps ordinary data fast", () => {
+test("keeps standard TZX header and data blocks fast even when the filename has control bytes", () => {
   const loader = tokenizeBasicLine("10 RANDOMIZE USR 32768");
   const blocks = parseTzx(makeTzx([
     standardTzxBlock(headerBlock({
@@ -191,7 +191,7 @@ test("replays only a control-code TZX header exactly, then keeps ordinary data f
   ]));
 
   assert.equal(blocks[0].header.name.startsWith("\x16\x01\x00"), true);
-  assert.deepEqual(blocks.map((block) => block.fastLoadable), [false, true, true]);
+  assert.deepEqual(blocks.map((block) => block.fastLoadable), [true, true, true]);
 });
 
 test("preserves TZX pause and stop-tape control blocks", () => {
@@ -326,45 +326,6 @@ test("standard tape pulse playback drives the EAR bit on port fe", () => {
   const secondLevel = machine.readPort(0xfe) & 0x40;
 
   assert.notEqual(firstLevel, secondLevel);
-});
-
-test("protected TZX header waits for the ROM before starting its matching data block", () => {
-  const payload = new Uint8Array([0x10, 0x20, 0x30]);
-  const blocks = parseTzx(makeTzx([
-    standardTzxBlock(headerBlock({
-      name: "\x16\x01\x00 HATE",
-      length: payload.length,
-      param1: 0,
-      param2: payload.length
-    }).slice(2), 1),
-    standardTzxBlock(dataBlock(payload).slice(2), 0)
-  ]));
-  const machine = makeMachine();
-  machine.setTapeBlocks(blocks);
-  machine.startTapePlayback({ waitForRomLoader: true });
-
-  machine.cpu.PC = 0x0560;
-  machine.readTapeEarBit();
-  const headerDuration = machine.tapePulseDurations.reduce((sum, duration) => sum + duration, 0);
-  machine.cpu.tStates += headerDuration;
-  machine.advanceTapePlayback();
-
-  assert.equal(machine.tapePlaybackBlockIndex, 1);
-  assert.equal(machine.tapeCursor, 1);
-  assert.equal(machine.tapePlaying, true);
-  assert.equal(machine.tapeWaitForRomLoader, true);
-  assert.equal(machine.tapePulseIndex, 0);
-  assert.equal(machine.tapeNextPulseTState, 0);
-
-  machine.cpu.PC = 0x1000;
-  machine.cpu.tStates += 100000;
-  assert.equal(machine.readTapeEarBit(), 0x40);
-  assert.equal(machine.tapePulseIndex, 0);
-
-  machine.cpu.PC = 0x0560;
-  machine.readTapeEarBit();
-  assert.equal(machine.tapeWaitForRomLoader, false);
-  assert.ok(machine.tapeNextPulseTState > machine.cpu.tStates);
 });
 
 test("tape playback from the cursor waits for the previous block pause", () => {
