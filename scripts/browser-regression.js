@@ -320,7 +320,16 @@ const hateTarget = mediaSwitchTargets.find((target) => target.name === "hate");
   const blocks = parseTapeFile(media.bytes);
   const summary = blocks.slice(0, 40).map((block, index) => {
     const bits = [index + ":" + block.type];
-    if (block.header?.name) bits.push("header=" + block.header.name);
+    if (block.flag !== null && block.flag !== undefined) bits.push("flag=" + block.flag);
+    if (block.payload) bits.push("payload=" + block.payload.length);
+    if (block.checksumValid !== undefined) bits.push("checksum=" + block.checksumValid);
+    if (block.header) {
+      bits.push("headerType=" + block.header.type);
+      bits.push("headerName=" + JSON.stringify(block.header.name));
+      bits.push("headerLength=" + block.header.length);
+      bits.push("param1=" + block.header.param1);
+      bits.push("param2=" + block.header.param2);
+    }
     if (block.signal?.kind) bits.push("signal=" + block.signal.kind);
     if (block.generalized) bits.push("generalized");
     if (block.pauseMs) bits.push("pause=" + block.pauseMs);
