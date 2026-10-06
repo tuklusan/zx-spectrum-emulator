@@ -109,7 +109,10 @@ test("rejects non-web URLs for the media relay", () => {
   assert.throws(() => mediaRelayUrl("file:///tmp/game.tzx"), /HTTP\(S\)/);
 });
 
-test("uses the companion TAP for the protected H.A.T.E. World of Spectrum TZX", () => {
-  assert.equal(worldOfSpectrumCompatibilityUrl("https://www.worldofspectrum.org//pub/sinclair/games/h/H.A.T.E..tzx.zip"), "https://www.worldofspectrum.org/pub/sinclair/games/h/H.A.T.E..tap.zip");
+test("uses the unprotected Erbe TZX for the protected H.A.T.E. World of Spectrum TZX", () => {
+  assert.equal(
+    worldOfSpectrumCompatibilityUrl("https://www.worldofspectrum.org//pub/sinclair/games/h/H.A.T.E..tzx.zip"),
+    "https://www.worldofspectrum.org/pub/sinclair/games/h/H.A.T.E.(ErbeSoftwareS.A.).tzx.zip"
+  );
   assert.equal(worldOfSpectrumCompatibilityUrl("https://www.worldofspectrum.org//pub/sinclair/games/f/FairlightII(ErbeSoftwareS.A.).tzx.zip"), null);
 });

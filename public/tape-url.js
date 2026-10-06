@@ -44,7 +44,7 @@ export function worldOfSpectrumCompatibilityUrl(value) {
   const hostname = target.hostname.toLowerCase();
   if ((hostname === "worldofspectrum.org" || hostname === "www.worldofspectrum.org")
       && target.pathname.replace(/\/{2,}/g, "/") === "/pub/sinclair/games/h/H.A.T.E..tzx.zip") {
-    target.pathname = "/pub/sinclair/games/h/H.A.T.E..tap.zip";
+    target.pathname = "/pub/sinclair/games/h/H.A.T.E.(ErbeSoftwareS.A.).tzx.zip";
     return target.href;
   }
   return null;
