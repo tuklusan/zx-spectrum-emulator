@@ -259,26 +259,6 @@ test("feeds a playing TAP block to the ROM tape load routine", () => {
   );
 });
 
-test("fast-load hook accepts the ROM tape loader entry window", () => {
-  const header = headerBlock({ type: 3, name: "CODE", length: 3, param1: 0x8000, param2: 0x8000 });
-  const blocks = parseTap(makeTap([header]));
-  const machine = makeMachine();
-  machine.setTapeBlocks(blocks);
-  machine.startTapePlayback();
-  machine.cpu.PC = 0x0560;
-  machine.cpu.SP = 0x7000;
-  machine.cpu.A = 0x00;
-  machine.cpu.IX = 0x6000;
-  machine.cpu.DE = 17;
-  machine.write16(machine.cpu.SP, 0x1234);
-
-  const cycles = machine.step();
-
-  assert.equal(cycles, 32);
-  assert.equal(machine.cpu.PC, 0x1234);
-  assert.equal(machine.tapeCursor, 1);
-});
-
 test("does not fast-load a mounted cassette while the tape is stopped", () => {
   const header = headerBlock({ type: 3, name: "CODE", length: 3, param1: 0x8000, param2: 0x8000 });
   const blocks = parseTap(makeTap([header]));

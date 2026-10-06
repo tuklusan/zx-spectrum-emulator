@@ -668,9 +668,7 @@ export class Spectrum48 {
   }
 
   interceptRomTapeLoad() {
-    if (!this.tapePlaying || this.tapeCursor >= this.tapeBlocks.length) return 0;
-    const pc = this.cpu.PC & 0xffff;
-    if (pc < 0x0556 || pc > 0x05e2) return 0;
+    if (!this.tapePlaying || this.cpu.PC !== 0x0556 || this.tapeCursor >= this.tapeBlocks.length) return 0;
 
     const block = this.tapeBlocks[this.tapeCursor];
     const expectedFlag = this.cpu.A & 0xff;
