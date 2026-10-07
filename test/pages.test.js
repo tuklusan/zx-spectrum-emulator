@@ -98,10 +98,13 @@ test("browser entry points use project-page-safe relative paths", async () => {
   assert.match(browserRegression, /H\.A\.T\.E\.\.tzx\.zip/);
   assert.match(browserRegression, /screenProof: "hate-title"/);
   assert.match(browserRegression, /function hateTitleVisible\(doc\)/);
-  assert.match(browserRegression, /worldOfSpectrumCompatibilityUrl/);
-  assert.match(browserRegression, /\| PC: /);
-  assert.match(browserRegression, /\| Border: /);
-  assert.match(browserRegression, /black > 40_000 && yellow > 80/);
+  assert.match(browserRegression, /black > 10_000/);
+  assert.match(browserRegression, /green > 5_000/);
+  assert.match(browserRegression, /yellow > 500/);
+  assert.match(browserRegression, /cyan > 500/);
+  assert.match(browserRegression, /grey > 1_000/);
+  assert.doesNotMatch(browserRegression, /\| PC: /);
+  assert.doesNotMatch(browserRegression, /H\.A\.T\.E\. BASIC loader/);
 });
 
 test("Spectrum viewer is play-first and keeps advanced tools dormant by default", async () => {
