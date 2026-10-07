@@ -4,10 +4,6 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { extname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
-import { detokenizeBasicProgram } from "../public/basic.js";
-import { unwrapSpectrumMedia } from "../public/media.js";
-import { parseTapeFile } from "../public/tape.js";
-import { worldOfSpectrumCompatibilityUrl } from "../public/tape-url.js";
 
 const ROOT = resolve("dist");
 const OUTPUT = resolve("browser-regression-artifacts");
@@ -190,13 +186,23 @@ function hateTitleVisible(doc) {
   if (!context) return false;
   const data = context.getImageData(32, 24, 256, 192).data;
   let black = 0;
+  let green = 0;
   let yellow = 0;
+  let cyan = 0;
+  let grey = 0;
   for (let offset = 0; offset < data.length; offset += 4) {
     const r = data[offset], g = data[offset + 1], b = data[offset + 2];
     if (r < 24 && g < 24 && b < 24) black += 1;
-    if (r > 180 && g > 180 && b < 96) yellow += 1;
+    if (r < 48 && g > 160 && b < 48) green += 1;
+    if (r > 160 && g > 160 && b < 96) yellow += 1;
+    if (r < 96 && g > 160 && b > 160) cyan += 1;
+    if (r > 160 && g > 160 && b > 160) grey += 1;
   }
-  return black > 40_000 && yellow > 80;
+  return black > 10_000
+    && green > 5_000
+    && yellow > 500
+    && cyan > 500
+    && grey > 1_000;
 }
 frame.addEventListener("load", async () => {
   try {
@@ -250,17 +256,11 @@ frame.addEventListener("load", async () => {
     const status = doc?.querySelector("#status")?.value ?? "(no Spectrum status)";
     const mediaStatus = doc?.querySelector("#mediaStatus")?.textContent ?? "(no media status)";
     const mediaLabel = doc?.querySelector("#mediaFileLabel")?.textContent ?? "(no media label)";
-    const pc = doc?.querySelector("#pc")?.textContent ?? "(no PC)";
-    const frameCount = doc?.querySelector("#frame")?.textContent ?? "(no frame)";
-    const border = doc?.querySelector("#border")?.textContent ?? "(no border)";
     result.dataset.state = "fail";
     result.textContent = "FAIL: " + error.message
       + " | Spectrum: " + status
       + " | Media: " + mediaStatus
-      + " | Label: " + mediaLabel
-      + " | PC: " + pc
-      + " | Frame: " + frameCount
-      + " | Border: " + border;
+      + " | Label: " + mediaLabel;
   }
 }, { once: true });
 frame.src = initialUrl;
@@ -312,42 +312,6 @@ for (const fixture of fixtures) {
   }
   if (!bytes) throw new Error(`${fixture.name}: fixture fetch failed: ${lastError?.message ?? "unknown error"}`);
   fixtureBodies.set(fixture.browserPath, bytes);
-}
-const hateTarget = mediaSwitchTargets.find((target) => target.name === "hate");
-{
-  const hateProbeUrl = worldOfSpectrumCompatibilityUrl(hateTarget.url) || hateTarget.url;
-  const relay = new URL("https://zx-spectrum-emulator.vagabondcouple.workers.dev/media");
-  relay.searchParams.set("url", hateProbeUrl);
-  const response = await fetch(relay, { signal: AbortSignal.timeout(15_000) });
-  if (!response.ok) throw new Error("H.A.T.E. tape probe failed: HTTP " + response.status);
-  const archiveBytes = new Uint8Array(await response.arrayBuffer());
-  const media = await unwrapSpectrumMedia(archiveBytes, hateProbeUrl);
-  const blocks = parseTapeFile(media.bytes);
-  const summary = blocks.slice(0, 40).map((block, index) => {
-    const bits = [index + ":" + block.type];
-    if (block.flag !== null && block.flag !== undefined) bits.push("flag=" + block.flag);
-    if (block.payload) bits.push("payload=" + block.payload.length);
-    if (block.checksumValid !== undefined) bits.push("checksum=" + block.checksumValid);
-    if (block.header) {
-      bits.push("headerType=" + block.header.type);
-      bits.push("headerName=" + JSON.stringify(block.header.name));
-      bits.push("headerLength=" + block.header.length);
-      bits.push("param1=" + block.header.param1);
-      bits.push("param2=" + block.header.param2);
-    }
-    if (block.signal?.kind) bits.push("signal=" + block.signal.kind);
-    if (block.generalized) bits.push("generalized");
-    if (block.pauseMs) bits.push("pause=" + block.pauseMs);
-    if (block.stopTape) bits.push("stop");
-    return bits.join("/");
-  }).join(", ");
-  console.log("H.A.T.E. tape probe: " + media.name + " | " + blocks.length + " blocks | " + summary);
-  if (blocks[0]?.header?.type === 0 && blocks[1]?.payload) {
-    console.log("H.A.T.E. BASIC loader: " + JSON.stringify(detokenizeBasicProgram(blocks[1].payload)));
-  }
-  if (blocks[5]?.payload) {
-    console.log("H.A.T.E. 50-byte loader: " + Array.from(blocks[5].payload, (byte) => byte.toString(16).padStart(2, "0")).join(""));
-  }
 }
 const chrome = findChrome();
 const server = staticServer();
